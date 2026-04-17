@@ -4,7 +4,7 @@
 
 Any hardware cold wallet. Any on-chain administrative action. Any blockchain. Directly from a browser — no CLI, no middleware, no hot keys.
 
-**Live:** [walletdeploy.com](https://walletdeploy.com) · **Patents Pending:** US 64/034,378 · US 64/041,067
+**Live:** [walletdeploy.com](https://walletdeploy.com) · **GitHub:** [github.com/farmerphd/walletdeploy](https://github.com/farmerphd/walletdeploy) · **Patents Pending:** US 64/034,378 · US 64/041,067
 
 ---
 
@@ -157,12 +157,7 @@ See [EPHEMERAL_KEYPAIR_SECURITY.md](EPHEMERAL_KEYPAIR_SECURITY.md) for full secu
 | `deploy.html` | No-CLI deploy/upgrade — Patent #17 |
 | `walletdeploy_index.html` | Landing page (served as index.html) |
 | `walletdeploy_verify.html` | Mobile transaction verification |
-| `recover_buffer.html` | Developer tool — recover locked buffer SOL |
-| `WALLETDEPLOY_ROADMAP.md` | Full product roadmap |
-| `WALLETDEPLOY_DEPLOY_SPEC.md` | deploy.html implementation spec |
-| `EPHEMERAL_KEYPAIR_SECURITY.md` | Security analysis of ephemeral keypair |
-| `PATENT_16_WALLETDEPLOY.txt` | US Provisional 64/034,378 |
-| `PATENT_17_DELEGATED_EPHEMERAL_KEYPAIR.txt` | US Provisional 64/041,067 |
+
 
 ---
 
@@ -175,8 +170,14 @@ MIT — see [LICENSE](LICENSE)
 ## Contact
 
 - **Site:** [walletdeploy.com](https://walletdeploy.com)
+- **GitHub:** [github.com/farmerphd/walletdeploy](https://github.com/farmerphd/walletdeploy)
 - **Email:** dev@walletdeploy.com
 - **Built by:** [Steve Farmer](https://x.com/Compustable), [CompuStable Inc.](https://compustable.com)
+
+---
+
+*WalletDeploy — the universal administrative signing layer for blockchain.*  
+*Built Apr 9, 2026. First use: recovered 1.659 SOL from a locked Solana buffer using Tangem WalletConnect.*
 
 ---
 
