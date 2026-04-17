@@ -154,7 +154,7 @@ See [EPHEMERAL_KEYPAIR_SECURITY.md](EPHEMERAL_KEYPAIR_SECURITY.md) for full secu
 | File | Purpose |
 |------|---------|
 | `app.html` | Main tool — all Solana program management features |
-| `deploy.html` | No-CLI deploy/upgrade — Patent #17 |
+| `deploy.html` | No-CLI deploy/upgrade — Patent Pending |
 | `walletdeploy_index.html` | Landing page (served as index.html) |
 | `walletdeploy_verify.html` | Mobile transaction verification |
 
