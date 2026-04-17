@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WalletDeploy — Deploy / Upgrade</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --purple: #9945ff;
+      --green:  #14f195;
+      --dark:   #0a0a0a;
+      --card:   #111118;
+      --border: #1e1e2e;
+      --text:   #e0e0e0;
+      --muted:  #aaa;
+    }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--dark); color: var(--text); line-height: 1.6; }
+    nav { display: flex; justify-content: space-between; align-items: center; padding: 20px 40px; border-bottom: 1px solid var(--border); }
+    .logo { font-size: 22px; font-weight: 700; color: white; text-decoration: none; }
+    .logo span { color: var(--green); }
+    .nav-right a { color: var(--muted); text-decoration: none; font-size: 14px; }
+    .nav-right a:hover { color: white; }
+    .container { max-width: 680px; margin: 0 auto; padding: 48px 24px; }
+    .page-title { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+    .page-sub { color: var(--muted); font-size: 15px; margin-bottom: 32px; }
+    .mode-toggle { display: flex; gap: 0; margin-bottom: 32px; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+    .mode-btn { flex: 1; padding: 12px; background: transparent; border: none; color: var(--muted); font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .mode-btn.active { background: rgba(153,69,255,0.15); color: var(--purple); }
+    .connect-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 28px; margin-bottom: 24px; text-align: center; }
+    .connect-card h3 { font-size: 16px; font-weight: 600; margin-bottom: 16px; }
+    #qrcode { margin: 16px auto; display: inline-block; }
+    .badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(20,241,149,0.08); border: 1px solid rgba(20,241,149,0.25); color: var(--green); padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 500; margin-bottom: 16px; }
+    .sign-all-badge { display: none; background: rgba(153,69,255,0.08); border: 1px solid rgba(153,69,255,0.25); color: var(--purple); padding: 6px 14px; border-radius: 6px; font-size: 12px; margin-top: 8px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 24px; margin-bottom: 16px; }
+    .card h3 { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+    .card .desc { color: var(--muted); font-size: 13px; margin-bottom: 16px; }
+    .card.disabled { opacity: 0.4; pointer-events: none; }
+    label { display: block; color: var(--muted); font-size: 12px; margin: 12px 0 4px; }
+    input { width: 100%; padding: 10px 14px; background: rgba(255,255,255,0.04); border: 1px solid var(--border); color: var(--text); border-radius: 8px; font-family: monospace; font-size: 12px; outline: none; transition: border-color 0.2s; }
+    input:focus { border-color: var(--purple); }
+    button { width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 12px; transition: all 0.2s; }
+    .btn-connect { background: var(--purple); color: white; }
+    .btn-connect:hover { opacity: 0.85; }
+    .btn-action { background: rgba(153,69,255,0.15); color: var(--purple); border: 1px solid rgba(153,69,255,0.3); }
+    .btn-action:hover { background: rgba(153,69,255,0.25); }
+    .btn-cancel { background: rgba(255,68,68,0.1); color: #ff6b6b; border: 1px solid rgba(255,68,68,0.25); margin-top: 8px; }
+    .btn-cancel:hover { background: rgba(255,68,68,0.2); }
+    .btn-resume { background: rgba(20,241,149,0.1); color: var(--green); border: 1px solid rgba(20,241,149,0.25); }
+    .btn-resume:hover { background: rgba(20,241,149,0.2); }
+    button:disabled { background: rgba(255,255,255,0.05); color: #444; border-color: var(--border); cursor: not-allowed; }
+    .status { margin-top: 12px; padding: 12px 14px; border-radius: 8px; font-size: 13px; word-break: break-all; white-space: pre-wrap; display: none; }
+    .status.show { display: block; }
+    .status.info    { background: rgba(153,69,255,0.08); border: 1px solid rgba(153,69,255,0.2); color: #c4a0ff; }
+    .status.success { background: rgba(20,241,149,0.08); border: 1px solid rgba(20,241,149,0.2); color: var(--green); }
+    .status.error   { background: rgba(255,68,68,0.08); border: 1px solid rgba(255,68,68,0.2); color: #ff8080; }
+    .status.loading { background: rgba(153,69,255,0.08); border: 1px solid rgba(153,69,255,0.2); color: #c4a0ff; }
+    .progress-wrap { margin: 12px 0; display: none; }
+    .progress-wrap.show { display: block; }
+    .progress-bar { width: 100%; background: #1e1e2e; border-radius: 4px; height: 8px; }
+    .progress-fill { height: 8px; border-radius: 4px; background: var(--green); width: 0%; transition: width 0.3s; }
+    .progress-text { font-size: 12px; color: var(--muted); text-align: center; margin-top: 6px; }
+    .resume-banner { background: rgba(20,241,149,0.06); border: 1px solid rgba(20,241,149,0.25); border-radius: 14px; padding: 20px 24px; margin-bottom: 24px; display: none; }
+    .resume-banner.show { display: block; }
+    .resume-banner h3 { color: var(--green); font-size: 15px; margin-bottom: 6px; }
+    .resume-banner p { color: var(--muted); font-size: 13px; margin-bottom: 12px; }
+    .drop-zone { border: 2px dashed var(--border); border-radius: 10px; padding: 32px; text-align: center; cursor: pointer; transition: all 0.2s; color: var(--muted); font-size: 14px; }
+    .drop-zone:hover, .drop-zone.drag-over { border-color: var(--purple); color: var(--purple); background: rgba(153,69,255,0.04); }
+    .drop-zone.has-file { border-color: var(--green); color: var(--green); background: rgba(20,241,149,0.04); }
+    .cost-estimate { background: rgba(20,241,149,0.06); border: 1px solid rgba(20,241,149,0.2); border-radius: 8px; padding: 12px 14px; font-size: 13px; color: var(--green); margin-top: 12px; display: none; }
+    .cost-estimate.show { display: block; }
+    .program-id-display { background: rgba(153,69,255,0.08); border: 1px solid rgba(153,69,255,0.2); border-radius: 8px; padding: 12px 14px; font-size: 12px; font-family: monospace; color: var(--purple); margin-top: 12px; word-break: break-all; display: none; }
+    .program-id-display.show { display: block; }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="logo"><img src="/icon.png" style="height:40px;vertical-align:middle;margin-right:8px;">Wallet<span>Deploy</span></a>
+  <div class="nav-right"><a href="/app.html">← Back to app</a></div>
+</nav>
+
+<div class="container">
+  <div class="page-title">Deploy / Upgrade Program</div>
+  <div class="page-sub">No CLI required. Two cold wallet taps. Any program size. Any browser.</div>
+
+  <div class="resume-banner" id="resumeBanner">
+    <h3>⚡ Previous session detected</h3>
+    <p id="resumeDesc">Upload the same .so file and reconnect your wallet to resume.</p>
+    <button class="btn-resume" onclick="dismissResume()">Start Fresh Instead</button>
+  </div>
+
+  <div class="mode-toggle">
+    <button class="mode-btn active" id="modeNew" onclick="setMode('new')">🚀 New Deploy</button>
+    <button class="mode-btn" id="modeUpgrade" onclick="setMode('upgrade')">⬆️ Upgrade</button>
+  </div>
+
+  <div class="connect-card">
+    <h3>Step 1 — Connect Hardware Wallet</h3>
+    <div id="qrcode"></div>
+    <div id="badge" style="display:none" class="badge">✅ Connected: <span id="pk"></span></div>
+    <div id="signAllBadge" class="sign-all-badge">⚡ One-tap mode available</div>
+    <button class="btn-connect" id="connectBtn" onclick="connectWallet()">Connect via WalletConnect</button>
+  </div>
+
+  <div class="card" id="step2Card">
+    <h3>Step 2 — Upload Program Binary</h3>
+    <div class="desc">Drag and drop your compiled .so file or click to browse.</div>
+    <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+      📁 Drop .so file here or click to browse
+    </div>
+    <input type="file" id="fileInput" accept=".so" style="display:none" onchange="handleFile(this.files[0])">
+    <div class="cost-estimate" id="costEstimate"></div>
+    <div id="upgradeFields" style="display:none">
+      <label>Existing Program ID</label>
+      <input id="existingProgramId" placeholder="Program address to upgrade" />
+    </div>
+  </div>
+
+  <div class="card disabled" id="step3Card">
+    <h3>Step 3 — Tap 1: Authorize & Fund</h3>
+    <div class="desc" id="tap1Desc">Cold wallet signs one transaction: funds ephemeral keypair + creates buffer + records on-chain BWD delegation memo.</div>
+    <button class="btn-action" id="tap1Btn" onclick="doTap1()">Tap 1 — Authorize & Fund</button>
+    <div class="status" id="tap1Status"></div>
+  </div>
+
+  <div class="card disabled" id="step4Card">
+    <h3>Step 4 — Writing Buffer (automated)</h3>
+    <div class="desc">Browser writes all chunks automatically. No wallet interaction needed.</div>
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="progress-text" id="progressText"></div>
+    </div>
+    <button class="btn-cancel" id="cancelBtn" style="display:none" onclick="cancelWrite()">Cancel</button>
+    <div class="status" id="writeStatus"></div>
+  </div>
+
+  <div class="card disabled" id="step5Card">
+    <h3>Step 5 — Tap 2: <span id="tap2Label">Deploy</span></h3>
+    <div class="desc" id="tap2Desc">Cold wallet signs DeployWithMaxDataLen. Cold wallet = upgrade authority from block 0. Buffer rent refunded.</div>
+    <div id="newDeployFields">
+      <div class="program-id-display" id="programIdDisplay"></div>
+    </div>
+    <label>Spill Address (receives buffer rent refund)</label>
+    <input id="spillAddr" placeholder="Auto-filled with cold wallet" />
+    <button class="btn-action" id="tap2Btn" onclick="doTap2()">Tap 2 — <span id="tap2BtnLabel">Deploy</span></button>
+    <div class="status" id="tap2Status"></div>
+  </div>
+
+</div>
+
+<footer style="border-top:1px solid #1e1e2e;padding:24px 40px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;">
+  <a href="/" style="font-size:18px;font-weight:700;color:white;text-decoration:none;"><img src="/icon.png" style="height:30px;vertical-align:middle;margin-right:8px;">Wallet<span style="color:#14f195;">Deploy</span></a>
+  <p style="color:#aaa;font-size:13px;">Patent Pending (US 64/041,067) · Built by <a href="https://x.com/Compustable" target="_blank" rel="noopener noreferrer" style="color:#aaa;">Steve Farmer</a>, <a href="https://compustable.com" style="color:#aaa;">CompuStable Inc.</a></p>
+  <div style="display:flex;gap:24px;">
+    <a href="/app.html" style="color:#aaa;text-decoration:none;font-size:13px;">← Back to app</a>
+    <a href="mailto:dev@walletdeploy.com" style="color:#aaa;text-decoration:none;font-size:13px;">Contact Us</a>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/tweetnacl@1.0.3/nacl-fast.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@1.95.3/lib/index.iife.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@walletconnect/sign-client@2.11.2/dist/index.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+  const PROJECT_ID   = '39ee2809cfbebffc3d74e5b28e8fc879';
+  const RELAY_URL    = 'wss://relay.walletconnect.com';
+  const BPF_LOADER   = 'BPFLoaderUpgradeab1e11111111111111111111111';
+  const MEMO_PROGRAM = 'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr';
+  const CHUNK_SIZE   = 800;
+  const LAMPORTS_PER_BYTE_YEAR = 3480;
+  const BUFFER_OVERHEAD = 37;
+
+  const NETWORK = {
+    chain:    'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp',
+    rpc:      'https://walletdeploy.com/rpc',
+    explorer: 'https://explorer.solana.com/tx/{sig}?cluster=mainnet-beta',
+  };
+
+  // ── State ──────────────────────────────────────────────────────
+  let network          = NETWORK;
+  let client           = null;
+  let session          = null;
+  let connectedPubkey  = null;
+  let connection       = null;
+  let mode             = 'new';
+  let networkLocked    = false; // guards mid-session state only
+  let signAllSupported = false;
+  let cancelled        = false;
+
+  let programBytes     = null;
+  let programHashHex   = null;
+  let sessionTimestamp = null;
+
+  let ephemeralKeypair  = null;
+  let bufferKeypair     = null;
+  let programKeypair    = null;
+  let ephemeralPubkey   = null;
+  let bufferPubkey      = null;
+  let programKeypairPk  = null;
+
+  // ── UI Helpers ─────────────────────────────────────────────────
+  function setStatus(id, msg, type) {
+    const el = document.getElementById(id);
+    el.textContent = msg;
+    el.className = 'status show ' + type;
+  }
+
+  function setStatusHtml(id, msg, type) {
+    const el = document.getElementById(id);
+    el.innerHTML = msg;
+    el.className = 'status show ' + type;
+  }
+
+  function enableCard(id)  { document.getElementById(id).classList.remove('disabled'); }
+  function disableCard(id) { document.getElementById(id).classList.add('disabled'); }
+
+  function setProgress(pct, text) {
+    document.getElementById('progressFill').style.width = pct + '%';
+    document.getElementById('progressText').textContent = text;
+    document.getElementById('progressWrap').classList.add('show');
+  }
+
+  function explorerLink(sig) {
+    const url = network.explorer.replace('{sig}', sig);
+    return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color:var(--green);word-break:break-all;">View on Solana Explorer →</a>`;
+  }
+
+  function b58decode(str) {
+    const B58 = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+    let n = BigInt(0);
+    for (const c of str) n = n * BigInt(58) + BigInt(B58.indexOf(c));
+    const bytes = new Uint8Array(64);
+    for (let i = 63; i >= 0; i--) { bytes[i] = Number(n & BigInt(0xff)); n >>= BigInt(8); }
+    return bytes;
+  }
+
+  // ── Mode ───────────────────────────────────────────────────────
+  function setMode(m) {
+    mode = m;
+    document.getElementById('modeNew').classList.toggle('active', m === 'new');
+    document.getElementById('modeUpgrade').classList.toggle('active', m === 'upgrade');
+    document.getElementById('upgradeFields').style.display    = m === 'upgrade' ? 'block' : 'none';
+    document.getElementById('newDeployFields').style.display  = m === 'new'     ? 'block' : 'none';
+    document.getElementById('tap2Label').textContent          = m === 'new' ? 'Deploy' : 'Upgrade';
+    document.getElementById('tap2BtnLabel').textContent       = m === 'new' ? 'Deploy' : 'Upgrade';
+    document.getElementById('tap2Desc').textContent           = m === 'new'
+      ? 'Cold wallet signs DeployWithMaxDataLen. Cold wallet = upgrade authority from block 0. Buffer rent refunded.'
+      : 'Cold wallet signs Upgrade. Cold wallet = upgrade authority. Buffer rent refunded to cold wallet.';
+  }
+
+  // ── Session Storage ────────────────────────────────────────────
+  function saveSession() {
+    sessionStorage.setItem('wd_session', JSON.stringify({
+      coldWallet:       connectedPubkey,
+      sessionTimestamp,
+      programHash:      programHashHex,
+      programSize:      programBytes.length,
+      mode,
+      programId:        mode === 'upgrade'
+                          ? document.getElementById('existingProgramId').value.trim()
+                          : null,
+    }));
+  }
+
+  function clearSession() { sessionStorage.removeItem('wd_session'); }
+
+  function checkResume() {
+    const raw = sessionStorage.getItem('wd_session');
+    if (!raw) return;
+    try {
+      const s = JSON.parse(raw);
+      document.getElementById('resumeDesc').textContent =
+        `Previous session: ${s.mode === 'new' ? 'New Deploy' : 'Upgrade'} · ` +
+        `${(s.programSize / 1024).toFixed(0)} KB · wallet ${s.coldWallet.slice(0,8)}...`;
+      document.getElementById('resumeBanner').classList.add('show');
+    } catch(e) { clearSession(); }
+  }
+
+  function dismissResume() {
+    clearSession();
+    document.getElementById('resumeBanner').classList.remove('show');
+  }
+
+  // ── Deterministic Keypair Derivation ───────────────────────────
+  async function deriveKeypairs(bytes, coldWallet, timestamp) {
+    const enc = new TextEncoder();
+    const hashBuf = await crypto.subtle.digest('SHA-256', bytes);
+    const programHash = new Uint8Array(hashBuf);
+    programHashHex = Array.from(programHash)
+      .map(b => b.toString(16).padStart(2,'0')).join('');
+
+    const base = new Uint8Array([
+      ...programHash,
+      ...enc.encode(coldWallet),
+      ...enc.encode(String(timestamp)),
+    ]);
+
+    // ephemeral keypair — signs write chunks
+    const ephSeed = new Uint8Array(await crypto.subtle.digest('SHA-256', base));
+    ephemeralKeypair = nacl.sign.keyPair.fromSeed(ephSeed);
+
+    // buffer keypair — buffer account address
+    const bufBase = new Uint8Array([...base, ...enc.encode('buffer')]);
+    const bufSeed = new Uint8Array(await crypto.subtle.digest('SHA-256', bufBase));
+    bufferKeypair = nacl.sign.keyPair.fromSeed(bufSeed);
+
+    // program keypair — new deploy only, one-time use
+    const progBase = new Uint8Array([...base, ...enc.encode('program')]);
+    const progSeed = new Uint8Array(await crypto.subtle.digest('SHA-256', progBase));
+    programKeypair = nacl.sign.keyPair.fromSeed(progSeed);
+
+    ephemeralPubkey  = new solanaWeb3.PublicKey(ephemeralKeypair.publicKey);
+    bufferPubkey     = new solanaWeb3.PublicKey(bufferKeypair.publicKey);
+    programKeypairPk = new solanaWeb3.PublicKey(programKeypair.publicKey);
+  }
+
+  // ── File Upload ────────────────────────────────────────────────
+  async function handleFile(file) {
+    if (!file) return;
+    const buf = await file.arrayBuffer();
+    programBytes = new Uint8Array(buf);
+
+    document.getElementById('dropZone').textContent =
+      `✅ ${file.name} — ${(programBytes.length / 1024).toFixed(1)} KB`;
+    document.getElementById('dropZone').classList.add('has-file');
+
+    // Cost estimate
+    const bufferBytes  = programBytes.length + BUFFER_OVERHEAD;
+    const rentLamports = Math.ceil(bufferBytes * LAMPORTS_PER_BYTE_YEAR * 2);
+    const numChunks    = Math.ceil(programBytes.length / CHUNK_SIZE);
+    const feeLamports  = numChunks * 5000 + 10000;
+    const totalSol     = (rentLamports + feeLamports) / 1e9;
+    document.getElementById('costEstimate').textContent =
+      `Estimated: ~${totalSol.toFixed(4)} SOL total · ` +
+      `${(rentLamports/1e9).toFixed(4)} SOL buffer rent (refunded on deploy) · ` +
+      `~${(feeLamports/1e9).toFixed(4)} SOL fees`;
+    document.getElementById('costEstimate').classList.add('show');
+
+    // Check if this file matches a prior session for resume
+    const raw = sessionStorage.getItem('wd_session');
+    if (raw && connectedPubkey) {
+      try {
+        const s = JSON.parse(raw);
+        const hashBuf = await crypto.subtle.digest('SHA-256', programBytes);
+        const hash = Array.from(new Uint8Array(hashBuf))
+          .map(b => b.toString(16).padStart(2,'0')).join('');
+        if (hash === s.programHash && connectedPubkey === s.coldWallet) {
+          sessionTimestamp = s.sessionTimestamp;
+          connection = new solanaWeb3.Connection(network.rpc, 'confirmed');
+          if (s.mode) setMode(s.mode);
+          if (s.programId) document.getElementById('existingProgramId').value = s.programId;
+          await deriveKeypairs(programBytes, connectedPubkey, sessionTimestamp);
+          document.getElementById('resumeBanner').classList.remove('show');
+          await doResume();
+          return;
+        }
+      } catch(e) { clearSession(); }
+    }
+
+    checkStep3();
+  }
+
+  // Drag and drop wiring
+  const dz = document.getElementById('dropZone');
+  dz.addEventListener('dragover',  e => { e.preventDefault(); dz.classList.add('drag-over'); });
+  dz.addEventListener('dragleave', ()  => dz.classList.remove('drag-over'));
+  dz.addEventListener('drop', e => {
+    e.preventDefault();
+    dz.classList.remove('drag-over');
+    handleFile(e.dataTransfer.files[0]);
+  });
+
+  function checkStep3() {
+    if (programBytes && connectedPubkey) enableCard('step3Card');
+  }
+  // ── WalletConnect ──────────────────────────────────────────────
+  async function connectWallet() {
+    document.getElementById('connectBtn').disabled = true;
+    client = null; session = null; // force fresh init
+    try {
+      const SC = window.SignClient ||
+        window.WalletConnectSignClient?.SignClient ||
+        window['@walletconnect/sign-client']?.SignClient ||
+        window['@walletconnect/sign-client'];
+      if (!SC || (!SC.init && !SC.SignClient)) throw new Error('SignClient not loaded');
+      const SignClient = SC.init ? SC : SC.SignClient;
+      client = await SignClient.init({
+        projectId: PROJECT_ID, relayUrl: RELAY_URL,
+        metadata: {
+          name: 'WalletDeploy',
+          description: 'No-CLI Solana program deployment with hardware cold wallet.',
+          url: 'https://walletdeploy.com',
+          icons: ['https://walletdeploy.com/favicon.ico'],
+        },
+      });
+      const { uri, approval } = await client.connect({
+        requiredNamespaces: {
+          solana: { methods: ['solana_signTransaction'], chains: [network.chain], events: [] },
+        },
+      });
+      if (uri) {
+        document.getElementById('connectBtn').textContent = 'Scan QR with your wallet...';
+        const qrDiv = document.getElementById('qrcode');
+        qrDiv.innerHTML = '';
+        new QRCode(qrDiv, { text: uri, width: 200, height: 200 });
+      }
+      session = await approval();
+      connectedPubkey = session.namespaces.solana.accounts[0].split(':')[2];
+
+      // signAll not requested — ephemeral keypair handles all writes
+      signAllSupported = false;
+      document.getElementById('signAllBadge').style.display = 'none';
+
+      document.getElementById('qrcode').innerHTML = '';
+      document.getElementById('badge').style.display = 'inline-flex';
+      document.getElementById('pk').textContent = connectedPubkey.slice(0,8) + '...' + connectedPubkey.slice(-8);
+      document.getElementById('connectBtn').style.display = 'none';
+      document.getElementById('spillAddr').value = connectedPubkey;
+
+      connection = new solanaWeb3.Connection(network.rpc, 'confirmed');
+
+      client.on('session_delete', onDisconnect);
+      client.on('session_expire', onDisconnect);
+
+      checkResume();
+      checkStep3();
+    } catch(e) {
+      document.getElementById('connectBtn').disabled = false;
+      document.getElementById('connectBtn').textContent = 'Connect via WalletConnect';
+      alert('Connect failed: ' + e.message);
+    }
+  }
+
+  function onDisconnect() {
+    session = null; connectedPubkey = null;
+    document.getElementById('badge').style.display = 'none';
+    document.getElementById('connectBtn').style.display = 'block';
+    document.getElementById('connectBtn').disabled = false;
+    document.getElementById('connectBtn').textContent = 'Reconnect Wallet →';
+    document.getElementById('spillAddr').value = '';
+    document.getElementById('signAllBadge').style.display = 'none';
+    disableCard('step3Card');
+  }
+
+  // ── Transaction Helpers ────────────────────────────────────────
+  function priorityFeeIx() {
+    const { TransactionInstruction, PublicKey } = solanaWeb3;
+    const data = new Uint8Array(9);
+    data[0] = 3;
+    new DataView(data.buffer).setBigUint64(1, BigInt(50000), true);
+    return new TransactionInstruction({
+      programId: new PublicKey('ComputeBudget111111111111111111111111111111'),
+      keys: [], data,
+    });
+  }
+
+  function memoIx(text, signerPubkey) {
+    const { TransactionInstruction, PublicKey } = solanaWeb3;
+    return new TransactionInstruction({
+      programId: new PublicKey(MEMO_PROGRAM),
+      keys: [{ pubkey: signerPubkey, isSigner: true, isWritable: false }],
+      data: new TextEncoder().encode(text),
+    });
+  }
+
+  async function sendWithRetry(rawTx, statusId) {
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const sig = await connection.sendRawTransaction(rawTx,
+          { skipPreflight: true, preflightCommitment: 'confirmed' });
+        const start = Date.now();
+        while (Date.now() - start < 90000) {
+          await new Promise(r => setTimeout(r, 2000));
+          const status = await connection.getSignatureStatus(sig,
+            { searchTransactionHistory: true });
+          if (status?.value?.err) throw new Error('TX failed: ' + JSON.stringify(status.value.err));
+          if (status?.value?.confirmationStatus === 'confirmed' ||
+              status?.value?.confirmationStatus === 'finalized') return sig;
+        }
+        throw new Error('Confirmation timeout');
+      } catch(e) {
+        const isExpiry = e.message &&
+          (e.message.includes('block height exceeded') ||
+           e.message.includes('Blockhash not found'));
+        if (isExpiry && attempt < 3) {
+          setStatus(statusId, `⏳ Blockhash expired — retrying (${attempt+1}/3)...`, 'loading');
+          continue;
+        }
+        throw e;
+      }
+    }
+  }
+
+  // Sign with cold wallet via WalletConnect, add local sigs first if provided
+  async function signAndSendCold(tx, statusId, localSigners) {
+    // localSigners: array of { keypair, pubkey } — nacl keypairs to sign locally first
+    if (localSigners) {
+      const msgBytes = tx.serializeMessage();
+      for (const { keypair, pubkey } of localSigners) {
+        const sig = nacl.sign.detached(msgBytes, keypair.secretKey);
+        tx.addSignature(pubkey, sig);
+      }
+    }
+    const serialized = tx.serialize({ requireAllSignatures: false, verifySignatures: false });
+    const b64 = btoa(String.fromCharCode(...serialized));
+    setStatus(statusId, '⏳ Tap your card to sign...', 'loading');
+    const result = await client.request({
+      topic: session.topic, chainId: network.chain,
+      request: { method: 'solana_signTransaction', params: { transaction: b64 } },
+    });
+    const coldPk = new solanaWeb3.PublicKey(connectedPubkey);
+    let rawTx;
+    if (result.signature) {
+      tx.addSignature(coldPk, b58decode(result.signature));
+      rawTx = tx.serialize();
+    } else if (result.transaction) {
+      const raw = result.transaction;
+      rawTx = raw.match(/^[0-9a-fA-F]+$/)
+        ? new Uint8Array(raw.match(/.{1,2}/g).map(b => parseInt(b,16)))
+        : Uint8Array.from(atob(raw), c => c.charCodeAt(0));
+    } else {
+      throw new Error('Unexpected wallet response');
+    }
+    return await sendWithRetry(rawTx, statusId);
+  }
+
+  // ── Tap 1 ──────────────────────────────────────────────────────
+  async function doTap1() {
+    document.getElementById('tap1Btn').disabled = true;
+    setStatus('tap1Status', 'Deriving keypairs...', 'loading');
+    try {
+      const { Transaction, PublicKey, SystemProgram, TransactionInstruction } = solanaWeb3;
+      const coldPk = new PublicKey(connectedPubkey);
+
+      // Derive all keypairs deterministically
+      sessionTimestamp = Date.now();
+      await deriveKeypairs(programBytes, connectedPubkey, sessionTimestamp);
+
+      // Show program ID for new deploy
+      if (mode === 'new') {
+        document.getElementById('programIdDisplay').textContent =
+          '🆕 Your new Program ID: ' + programKeypairPk.toBase58();
+        document.getElementById('programIdDisplay').classList.add('show');
+      }
+
+      // Calculate funding
+      const bufferBytes  = programBytes.length + BUFFER_OVERHEAD;
+      const rentLamports = Math.ceil(bufferBytes * LAMPORTS_PER_BYTE_YEAR * 2);
+      const numChunks    = Math.ceil(programBytes.length / CHUNK_SIZE);
+      const feeLamports  = numChunks * 5000 + 20000;
+
+      // Verify rent-exempt minimum via RPC
+      const rentExemptMin = await connection.getMinimumBalanceForRentExemption(bufferBytes);
+      const actualRent = Math.max(rentLamports, rentExemptMin);
+
+      const { blockhash, lastValidBlockHeight } =
+        await connection.getLatestBlockhash('confirmed');
+
+      const tx = new Transaction({ recentBlockhash: blockhash, feePayer: coldPk });
+      tx.add(priorityFeeIx());
+
+      // Instruction 1: createAccount — cold wallet creates buffer account (raw to avoid Buffer polyfill)
+      const createAccountData = new Uint8Array(52);
+      new DataView(createAccountData.buffer).setUint32(0, 0, true);                        // instruction index 0 = CreateAccount
+      new DataView(createAccountData.buffer).setBigUint64(4, BigInt(actualRent), true);  // lamports
+      new DataView(createAccountData.buffer).setBigUint64(12, BigInt(bufferBytes), true);  // space
+      createAccountData.set(new solanaWeb3.PublicKey(BPF_LOADER).toBytes(), 20);           // owner
+      tx.add(new TransactionInstruction({
+        programId: SystemProgram.programId,
+        keys: [
+          { pubkey: coldPk,       isSigner: true, isWritable: true },
+          { pubkey: bufferPubkey, isSigner: true, isWritable: true },
+        ],
+        data: createAccountData,
+      }));
+
+      // Instruction 2: fund ephemeral keypair for write fees
+      const transferData = new Uint8Array(12);
+      new DataView(transferData.buffer).setUint32(0, 2, true);                       // instruction index 2 = Transfer
+      new DataView(transferData.buffer).setBigUint64(4, BigInt(feeLamports), true);
+      tx.add(new TransactionInstruction({
+        programId: SystemProgram.programId,
+        keys: [
+          { pubkey: coldPk,         isSigner: true,  isWritable: true },
+          { pubkey: ephemeralPubkey, isSigner: false, isWritable: true },
+        ],
+        data: transferData,
+      }));
+
+      // Instruction 3: InitializeBuffer — ephemeral is authority
+      tx.add(new TransactionInstruction({
+        programId: new PublicKey(BPF_LOADER),
+        keys: [
+          { pubkey: bufferPubkey,    isSigner: false, isWritable: true  },
+          { pubkey: ephemeralPubkey, isSigner: false, isWritable: false },
+        ],
+        data: new Uint8Array([0, 0, 0, 0]),
+      }));
+
+      // Instruction 4: BWD delegation memo — on-chain audit record
+      const bwdMemo = JSON.stringify({
+        type:      'BWD',
+        authority: connectedPubkey,
+        delegate:  ephemeralPubkey.toBase58(),
+        buffer:    bufferPubkey.toBase58(),
+        expires:   Math.floor(Date.now() / 1000) + 3600,
+        maxBytes:  programBytes.length,
+      });
+      tx.add(memoIx(bwdMemo, coldPk));
+
+      setStatus('tap1Status', 'Building transaction...', 'loading');
+
+      // bufferKeypair signs locally (it's the new account being created)
+      const sig = await signAndSendCold(tx, 'tap1Status',
+        [{ keypair: bufferKeypair, pubkey: bufferPubkey }]);
+
+      // Lock network, save session
+      networkLocked = true;
+      saveSession();
+
+      setStatusHtml('tap1Status',
+        `✅ Authorized! Buffer created on-chain. BWD memo recorded.\n\n${explorerLink(sig)}`,
+        'success');
+
+      enableCard('step4Card');
+      document.getElementById('cancelBtn').style.display = 'block';
+      await doWriteLoop();
+
+    } catch(e) {
+      setStatus('tap1Status', '❌ ' + e.message, 'error');
+      document.getElementById('tap1Btn').disabled = false;
+    }
+  }
+
+  // ── Write Loop ─────────────────────────────────────────────────
+  async function doWriteLoop(startOffset) {
+    cancelled = false;
+    const { Transaction, PublicKey, TransactionInstruction } = solanaWeb3;
+    const numChunks = Math.ceil(programBytes.length / CHUNK_SIZE);
+
+    // Determine start chunk
+    let startChunk = 0;
+    if (startOffset !== undefined) {
+      startChunk = Math.floor(startOffset / CHUNK_SIZE);
+    }
+
+    setStatus('writeStatus', `Writing ${numChunks} chunks...`, 'loading');
+
+    // signAll path — only on fresh sessions, never on resume
+    if (signAllSupported && startChunk === 0 && startOffset === undefined) {
+      try {
+        await doWriteLoopSignAll(numChunks);
+        return;
+      } catch(e) {
+        signAllSupported = false;
+        setStatus('writeStatus', '⚠️ One-tap mode unavailable, using ephemeral signing...', 'loading');
+        await new Promise(r => setTimeout(r, 1500));
+      }
+    }
+
+    let { blockhash } = await connection.getLatestBlockhash('confirmed');
+
+    for (let i = startChunk; i < numChunks; i++) {
+      if (cancelled) {
+        setStatus('writeStatus',
+          `⚠️ Cancelled at chunk ${i}/${numChunks}.\nBuffer: ${bufferPubkey.toBase58()}\nRe-upload same file to resume.`,
+          'error');
+        return;
+      }
+
+      const offset = i * CHUNK_SIZE;
+      const chunk  = programBytes.slice(offset, offset + CHUNK_SIZE);
+
+      // BPFLoaderUpgradeable::Write [1,0,0,0] + offset (u32 LE) + length (u32 LE) + bytes
+      const data = new Uint8Array(4 + 4 + 4 + chunk.length);
+      data[0] = 1;
+      new DataView(data.buffer).setUint32(4, offset, true);
+      new DataView(data.buffer).setUint32(8, chunk.length, true);
+      data.set(chunk, 12);
+
+      const writeIx = new TransactionInstruction({
+        programId: new PublicKey(BPF_LOADER),
+        keys: [
+          { pubkey: bufferPubkey,    isSigner: false, isWritable: true  },
+          { pubkey: ephemeralPubkey, isSigner: true,  isWritable: false },
+        ],
+        data,
+      });
+
+      const tx = new Transaction({ recentBlockhash: blockhash, feePayer: ephemeralPubkey });
+      tx.add(priorityFeeIx());
+      tx.add(writeIx);
+
+      const msgBytes = tx.serializeMessage();
+      const sigBytes = nacl.sign.detached(msgBytes, ephemeralKeypair.secretKey);
+      // Manually build signed transaction without Buffer dependency
+      // Solana wire format: [1 byte num sigs] [64 byte sig] [message bytes]
+      const rawTx = new Uint8Array(1 + 64 + msgBytes.length);
+      rawTx[0] = 1; // 1 signature
+      rawTx.set(sigBytes, 1);
+      rawTx.set(msgBytes, 65);
+
+      try {
+        await sendWithRetry(rawTx, 'writeStatus');
+      } catch(e) {
+        setStatus('writeStatus', `❌ Chunk ${i} failed: ${e.message}\nBuffer: ${bufferPubkey.toBase58()}`, 'error');
+        return;
+      }
+
+      const pct = Math.round(((i + 1) / numChunks) * 100);
+      setProgress(pct, `Writing chunk ${i + 1} of ${numChunks} (${pct}%)`);
+
+      // Refresh blockhash every 50 chunks
+      if (i % 50 === 49) {
+        ({ blockhash } = await connection.getLatestBlockhash('confirmed'));
+      }
+    }
+
+    document.getElementById('cancelBtn').style.display = 'none';
+    setStatus('writeStatus', '✅ Buffer written successfully.', 'success');
+    enableCard('step5Card');
+  }
+
+  // signAll path — one cold wallet tap pre-signs all write txs
+  async function doWriteLoopSignAll(numChunks) {
+    const { Transaction, PublicKey, TransactionInstruction } = solanaWeb3;
+    setStatus('writeStatus', '⚡ One-tap mode: building all transactions...', 'loading');
+
+    let { blockhash } = await connection.getLatestBlockhash('confirmed');
+    const txs = [];
+
+    for (let i = 0; i < numChunks; i++) {
+      const offset = i * CHUNK_SIZE;
+      const chunk  = programBytes.slice(offset, offset + CHUNK_SIZE);
+      const data   = new Uint8Array(4 + 4 + 4 + chunk.length);
+      data[0] = 1;
+      new DataView(data.buffer).setUint32(4, offset, true);
+      new DataView(data.buffer).setUint32(8, chunk.length, true);
+      data.set(chunk, 12);
+
+      const tx = new Transaction({
+        recentBlockhash: blockhash,
+        feePayer: new PublicKey(connectedPubkey),
+      });
+      tx.add(priorityFeeIx());
+      tx.add(new TransactionInstruction({
+        programId: new PublicKey(BPF_LOADER),
+        keys: [
+          { pubkey: bufferPubkey,                          isSigner: false, isWritable: true  },
+          { pubkey: new PublicKey(connectedPubkey),        isSigner: true,  isWritable: false },
+        ],
+        data,
+      }));
+      txs.push(tx);
+      if (i % 50 === 49) ({ blockhash } = await connection.getLatestBlockhash('confirmed'));
+    }
+
+    const b64Txs = txs.map(tx => {
+      const s = tx.serialize({ requireAllSignatures: false, verifySignatures: false });
+      return btoa(String.fromCharCode(...s));
+    });
+
+    setStatus('writeStatus', '⚡ Tap your card once to pre-sign all write transactions...', 'loading');
+    const result = await client.request({
+      topic: session.topic, chainId: network.chain,
+      request: { method: 'solana_signAllTransactions', params: { transactions: b64Txs } },
+    });
+
+    setStatus('writeStatus', '⚡ Broadcasting...', 'loading');
+    const signedTxs = result.transactions || result;
+    for (let i = 0; i < signedTxs.length; i++) {
+      const raw = Uint8Array.from(atob(signedTxs[i]), c => c.charCodeAt(0));
+      await sendWithRetry(raw, 'writeStatus');
+      const pct = Math.round(((i + 1) / signedTxs.length) * 100);
+      setProgress(pct, `Broadcasting chunk ${i + 1} of ${signedTxs.length} (${pct}%)`);
+    }
+
+    document.getElementById('cancelBtn').style.display = 'none';
+    setStatus('writeStatus', '✅ Buffer written (one-tap mode).', 'success');
+    enableCard('step5Card');
+  }
+
+  function cancelWrite() {
+    cancelled = true;
+    document.getElementById('cancelBtn').style.display = 'none';
+  }
+
+  // ── Resume ─────────────────────────────────────────────────────
+  async function doResume() {
+    setStatus('writeStatus', '🔍 Checking on-chain buffer state...', 'loading');
+    enableCard('step4Card');
+    try {
+      const startOffset = await getResumeOffset();
+      const numChunks   = Math.ceil(programBytes.length / CHUNK_SIZE);
+      const startChunk  = Math.floor(startOffset / CHUNK_SIZE);
+
+      if (startChunk >= numChunks) {
+        setStatus('writeStatus', '✅ Buffer already fully written. Proceed to Tap 2.', 'success');
+        enableCard('step5Card');
+        return;
+      }
+      setStatus('writeStatus',
+        `⚡ Resuming from chunk ${startChunk + 1} of ${numChunks}...`, 'loading');
+      await doWriteLoop(startOffset);
+    } catch(e) {
+      setStatus('writeStatus', '❌ Resume failed: ' + e.message, 'error');
+    }
+  }
+
+  async function getResumeOffset(bufPubkey) {
+    const pk   = bufPubkey || bufferPubkey;
+    const info = await connection.getAccountInfo(pk);
+    if (!info) return 0;
+    // Buffer account: 37 bytes header + bytecode written so far
+    const written = info.data.slice(37);
+    for (let i = 0; i < written.length; i++) {
+      if (written[i] !== programBytes[i]) return i;
+    }
+    return written.length;
+  }
+  // ── Tap 2 ──────────────────────────────────────────────────────
+  async function doTap2() {
+    document.getElementById('tap2Btn').disabled = true;
+    setStatus('tap2Status', 'Building transaction...', 'loading');
+    try {
+      const { Transaction, PublicKey, TransactionInstruction, SystemProgram } = solanaWeb3;
+      const coldPk   = new PublicKey(connectedPubkey);
+      const spillAddr = new PublicKey(
+        document.getElementById('spillAddr').value.trim() || connectedPubkey
+      );
+
+      const { blockhash } = await connection.getLatestBlockhash('confirmed');
+      const tx = new Transaction({ recentBlockhash: blockhash, feePayer: coldPk });
+      tx.add(priorityFeeIx());
+
+      if (mode === 'upgrade') {
+        // ── Upgrade ──────────────────────────────────────────────
+        const programId = new PublicKey(
+          document.getElementById('existingProgramId').value.trim()
+        );
+        const [programDataAddr] = await PublicKey.findProgramAddress(
+          [programId.toBytes()], new PublicKey(BPF_LOADER)
+        );
+        tx.add(new TransactionInstruction({
+          programId: new PublicKey(BPF_LOADER),
+          keys: [
+            { pubkey: programDataAddr, isSigner: false, isWritable: true  },
+            { pubkey: programId,       isSigner: false, isWritable: true  },
+            { pubkey: bufferPubkey,    isSigner: false, isWritable: true  },
+            { pubkey: spillAddr,       isSigner: false, isWritable: true  },
+            { pubkey: new PublicKey('SysvarRent111111111111111111111111111111111'),  isSigner: false, isWritable: false },
+            { pubkey: new PublicKey('SysvarC1ock11111111111111111111111111111111'), isSigner: false, isWritable: false },
+            { pubkey: coldPk,          isSigner: true,  isWritable: false },
+          ],
+          data: new Uint8Array([3, 0, 0, 0]),
+        }));
+        tx.add(memoIx(
+          `UPGRADE | program:${programId.toBase58()} | buffer:${bufferPubkey.toBase58()} | authority:${connectedPubkey}`,
+          coldPk
+        ));
+
+        const sig = await signAndSendCold(tx, 'tap2Status', null);
+        setStatusHtml('tap2Status',
+          `✅ Program upgraded! Cold wallet is upgrade authority.\n\n${explorerLink(sig)}`,
+          'success');
+
+      } else {
+        // ── New Deploy ────────────────────────────────────────────
+        const [programDataAddr] = await PublicKey.findProgramAddress(
+          [programKeypairPk.toBytes()], new PublicKey(BPF_LOADER)
+        );
+
+        // DeployWithMaxDataLen discriminator [1,0,0,0] + max_data_len (u64 LE)
+        const deployData = new Uint8Array(12);
+        deployData[0] = 1;
+        new DataView(deployData.buffer).setBigUint64(
+          4, BigInt(programBytes.length + BUFFER_OVERHEAD), true
+        );
+
+        tx.add(new TransactionInstruction({
+          programId: new PublicKey(BPF_LOADER),
+          keys: [
+            { pubkey: coldPk,                                                           isSigner: true,  isWritable: true  }, // payer
+            { pubkey: programDataAddr,                                                  isSigner: false, isWritable: true  }, // programdata PDA
+            { pubkey: programKeypairPk,                                                 isSigner: true,  isWritable: true  }, // program account
+            { pubkey: bufferPubkey,                                                     isSigner: false, isWritable: true  }, // buffer
+            { pubkey: spillAddr,                                                        isSigner: false, isWritable: true  }, // spill
+            { pubkey: new PublicKey('SysvarRent111111111111111111111111111111111'),     isSigner: false, isWritable: false },
+            { pubkey: new PublicKey('SysvarC1ock11111111111111111111111111111111'),    isSigner: false, isWritable: false },
+            { pubkey: SystemProgram.programId,                                          isSigner: false, isWritable: false },
+            { pubkey: coldPk,                                                           isSigner: true,  isWritable: false }, // upgrade authority
+          ],
+          data: deployData,
+        }));
+        tx.add(memoIx(
+          `DEPLOY | program:${programKeypairPk.toBase58()} | buffer:${bufferPubkey.toBase58()} | authority:${connectedPubkey}`,
+          coldPk
+        ));
+
+        // programKeypair signs locally, cold wallet signs via WalletConnect
+        const sig = await signAndSendCold(tx, 'tap2Status',
+          [{ keypair: programKeypair, pubkey: programKeypairPk }]);
+
+        setStatusHtml('tap2Status',
+          `✅ Program deployed!\n🆕 Program ID: ${programKeypairPk.toBase58()}\nCold wallet = upgrade authority from block 0.\n\n${explorerLink(sig)}`,
+          'success');
+      }
+
+      // Trigger cleanup
+      await doCleanup();
+
+    } catch(e) {
+      setStatus('tap2Status', '❌ ' + e.message, 'error');
+      document.getElementById('tap2Btn').disabled = false;
+    }
+  }
+
+  // ── Cleanup ────────────────────────────────────────────────────
+  async function doCleanup() {
+    try {
+      const { Transaction, PublicKey, SystemProgram } = solanaWeb3;
+      const coldPk = new PublicKey(connectedPubkey);
+
+      // Return any remaining SOL from ephemeral keypair to cold wallet
+      const balance = await connection.getBalance(ephemeralPubkey);
+      if (balance > 5000) {
+        const { blockhash } = await connection.getLatestBlockhash('confirmed');
+        const tx = new Transaction({ recentBlockhash: blockhash, feePayer: ephemeralPubkey });
+        const transferData = new Uint8Array(12);
+        new DataView(transferData.buffer).setUint32(0, 2, true);
+        new DataView(transferData.buffer).setBigUint64(4, BigInt(balance - 5000), true);
+        tx.add(new TransactionInstruction({
+          programId: solanaWeb3.SystemProgram.programId,
+          keys: [
+            { pubkey: ephemeralPubkey, isSigner: true,  isWritable: true },
+            { pubkey: coldPk,          isSigner: false, isWritable: true },
+          ],
+          data: transferData,
+        }));
+        const msgBytes = tx.serializeMessage();
+        const sigBytes = nacl.sign.detached(msgBytes, ephemeralKeypair.secretKey);
+        const rawTx = new Uint8Array(1 + 64 + msgBytes.length);
+        rawTx[0] = 1;
+        rawTx.set(sigBytes, 1);
+        rawTx.set(msgBytes, 65);
+        await connection.sendRawTransaction(rawTx);
+      }
+    } catch(e) {
+      // Cleanup failure is non-fatal — log and continue
+      console.warn('Cleanup transfer failed:', e.message);
+    }
+
+    // Destroy keypairs
+    ephemeralKeypair = null;
+    bufferKeypair    = null;
+    programKeypair   = null;
+
+    // Clear session
+    clearSession();
+
+    // Unlock network toggle for next session
+    networkLocked = false;
+
+    const existing = document.getElementById('tap2Status').innerHTML;
+    document.getElementById('tap2Status').innerHTML =
+      existing + '\n\n✅ Unused SOL returned. Ephemeral keys destroyed. Session cleared.';
+  }
+
+</script>
+</body>
+</html>

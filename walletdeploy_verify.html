@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>WalletDeploy Verify</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --purple: #9945ff;
+      --green:  #14f195;
+      --dark:   #0a0a0a;
+      --card:   #111118;
+      --border: #1e1e2e;
+      --text:   #e0e0e0;
+      --muted:  #aaa;
+      --red:    #ff6b6b;
+    }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--dark); color: var(--text); min-height: 100vh; }
+
+    .header { padding: 20px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; }
+    .header img { height: 32px; }
+    .header .title { font-size: 18px; font-weight: 700; }
+    .header .title span { color: var(--green); }
+
+    .container { padding: 24px; max-width: 480px; margin: 0 auto; }
+
+    .status-card { border-radius: 14px; padding: 20px; margin-bottom: 20px; text-align: center; }
+    .status-card.loading { background: rgba(153,69,255,0.08); border: 1px solid rgba(153,69,255,0.2); }
+    .status-card.verified { background: rgba(20,241,149,0.08); border: 1px solid rgba(20,241,149,0.3); }
+    .status-card.error { background: rgba(255,68,68,0.08); border: 1px solid rgba(255,68,68,0.3); }
+    .status-icon { font-size: 48px; margin-bottom: 12px; }
+    .status-title { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+    .status-sub { color: var(--muted); font-size: 14px; }
+
+    .detail-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 20px; margin-bottom: 16px; }
+    .detail-card .label { color: var(--purple); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; font-weight: 600; }
+    .detail-card .value { font-size: 15px; font-weight: 600; margin-bottom: 4px; word-break: break-all; }
+    .detail-card .sub { color: var(--muted); font-size: 12px; font-family: monospace; word-break: break-all; }
+
+    .verify-code { background: rgba(20,241,149,0.08); border: 1px solid rgba(20,241,149,0.3); border-radius: 10px; padding: 16px; margin-bottom: 20px; text-align: center; }
+    .verify-code .code { font-size: 28px; font-weight: 800; color: var(--green); letter-spacing: 4px; font-family: monospace; }
+    .verify-code .label { color: var(--muted); font-size: 12px; margin-top: 6px; }
+
+    .btn { width: 100%; padding: 16px; border-radius: 12px; border: none; font-size: 16px; font-weight: 700; cursor: pointer; margin-bottom: 12px; transition: all 0.2s; }
+    .btn-sign { background: var(--purple); color: white; }
+    .btn-sign:hover { opacity: 0.85; }
+    .btn-sign:disabled { background: rgba(255,255,255,0.05); color: #444; cursor: not-allowed; }
+    .btn-cancel { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+
+    .warning { background: rgba(255,153,0,0.08); border: 1px solid rgba(255,153,0,0.3); border-radius: 10px; padding: 14px; font-size: 13px; color: #ffaa33; margin-bottom: 20px; }
+
+    .connecting { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 14px; margin-bottom: 16px; }
+    .spinner { width: 20px; height: 20px; border: 2px solid var(--border); border-top-color: var(--purple); border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    #qrcode { margin: 16px auto; display: inline-block; }
+    .qr-section { text-align: center; margin-bottom: 20px; }
+    .qr-section p { color: var(--muted); font-size: 13px; margin-top: 12px; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <img src="/icon.png" alt="WalletDeploy">
+    <div class="title">Wallet<span>Deploy</span> Verify</div>
+  </div>
+
+  <div class="container">
+    <div id="loadingState" class="status-card loading">
+      <div class="status-icon">⏳</div>
+      <div class="status-title">Decoding transaction...</div>
+      <div class="status-sub">Please wait</div>
+    </div>
+
+    <div id="mainContent" style="display:none;">
+
+      <div class="status-card verified">
+        <div class="status-icon">✅</div>
+        <div class="status-title">Transaction Verified</div>
+        <div class="status-sub">Review the details below before signing</div>
+      </div>
+
+      <div class="verify-code">
+        <div class="code" id="verifyCode">----</div>
+        <div class="label">Verification code — matches your desktop</div>
+      </div>
+
+      <div id="txDetails"></div>
+
+      <div class="warning">
+        ⚠️ Only sign if these details match exactly what you see on your desktop browser.
+      </div>
+
+      <div id="connectSection">
+        <button class="btn btn-sign" id="signBtn" onclick="connectAndSign()">
+          Connect Wallet & Sign →
+        </button>
+        <button class="btn btn-cancel" onclick="window.close()">Cancel</button>
+      </div>
+
+      <div id="connectingSection" style="display:none;">
+        <div class="connecting">
+          <div class="spinner"></div>
+          <span id="connectingMsg">Connecting to wallet...</span>
+        </div>
+        <div class="qr-section" id="qrSection" style="display:none;">
+          <div id="qrcode"></div>
+          <p>Scan with your Tangem or Keystone app</p>
+        </div>
+      </div>
+
+      <div id="successSection" style="display:none;">
+        <div class="status-card verified">
+          <div class="status-icon">🎉</div>
+          <div class="status-title">Signed!</div>
+          <div class="status-sub" id="successMsg">Transaction signed and broadcast.</div>
+        </div>
+      </div>
+
+      <div id="errorSection" style="display:none;">
+        <div class="status-card error">
+          <div class="status-icon">❌</div>
+          <div class="status-title">Error</div>
+          <div class="status-sub" id="errorMsg"></div>
+        </div>
+        <button class="btn btn-sign" onclick="location.reload()">Try Again</button>
+      </div>
+
+    </div>
+
+    <div id="errorState" class="status-card error" style="display:none;">
+      <div class="status-icon">❌</div>
+      <div class="status-title">Invalid Link</div>
+      <div class="status-sub">This verification link is missing transaction data. Please go back to WalletDeploy and try again.</div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@1.95.3/lib/index.iife.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@walletconnect/sign-client@2.11.2/dist/index.umd.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
+
+  <script>
+    const PROJECT_ID   = '39ee2809cfbebffc3d74e5b28e8fc879';
+    const RELAY_URL    = 'wss://relay.walletconnect.com';
+    const SOLANA_CHAIN = 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp';
+    const RPC          = 'https://walletdeploy.com/rpc';
+    const BPF_LOADER   = 'BPFLoaderUpgradeab1e11111111111111111111111';
+    const MEMO_PROGRAM = 'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr';
+
+    let txData = null;
+    let client = null;
+    let session = null;
+
+    async function computeVerifyCode(description) {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(description);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const hex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      return hex.slice(0,4).toUpperCase() + '-' + hex.slice(4,8).toUpperCase();
+    }
+
+    function decodeInstruction(data, keys) {
+      if (!data || data.length < 4) return null;
+      const disc = data[0];
+      const short = addr => addr.slice(0,8) + '...' + addr.slice(-6);
+      switch(disc) {
+        case 1: return { action: 'Deploy Program',       color: '#14f195', keys: { Program: keys[2], Buffer: keys[3], Authority: keys[8] } };
+        case 3: return { action: 'Upgrade Program',      color: '#14f195', keys: { Program: keys[1], Buffer: keys[2], Spill: keys[3] } };
+        case 4: return { action: 'Set Authority',        color: '#9945ff', keys: { Account: keys[0], NewAuthority: keys[2] } };
+        case 5: return { action: 'Recover SOL (Close Buffer)', color: '#14f195', keys: { Buffer: keys[0], Recipient: keys[1] } };
+        case 6: return { action: 'Extend Program',       color: '#9945ff', keys: { Program: keys[1] } };
+        default: return { action: 'Unknown Instruction', color: '#ffaa33', keys: {} };
+      }
+    }
+
+    async function init() {
+      const params = new URLSearchParams(window.location.search);
+      const dParam = params.get('d');         // compressed payload
+      const descParam = params.get('desc');   // legacy
+      const codeParam = params.get('code');   // legacy
+      const txParam = params.get('tx');       // legacy full-tx
+
+      if (!dParam && !descParam && !txParam) {
+        document.getElementById('loadingState').style.display = 'none';
+        document.getElementById('errorState').style.display = 'block';
+        return;
+      }
+
+      try {
+        let description = '';
+        let verifyCode = '----';
+
+        if (dParam) {
+          const payload = JSON.parse(LZString.decompressFromEncodedURIComponent(dParam));
+          description = payload.desc || '';
+          verifyCode = payload.code || '----';
+        } else if (descParam) {
+          description = descParam;
+          verifyCode = codeParam || '----';
+        } else if (txParam) {
+          const txBytes = Uint8Array.from(atob(txParam), c => c.charCodeAt(0));
+          const { Transaction } = solanaWeb3;
+          const tx = Transaction.from(txBytes);
+          for (const ix of tx.instructions) {
+            if (ix.programId.toBase58() === MEMO_PROGRAM) {
+              const memoText = new TextDecoder().decode(ix.data);
+              description = memoText.split(' | ').slice(0,-1).join(' | ');
+            }
+          }
+          verifyCode = description ? await computeVerifyCode(description) : '----';
+        }
+
+        document.getElementById('verifyCode').textContent = verifyCode;
+
+        let html = '';
+        if (description) {
+          const parts = description.split(' | ');
+          const action = parts[0] || 'Unknown';
+          const actionColors = {
+            'UPGRADE-PROGRAM': '#14f195', 'DEPLOY-PROGRAM': '#14f195',
+            'RECOVER-SOL': '#14f195', 'SET-BUFFER-AUTHORITY': '#9945ff',
+            'TRANSFER-AUTHORITY': '#9945ff', 'EXTEND-PROGRAM': '#9945ff',
+            'EMERGENCY-SHUTDOWN': '#ff6b6b', 'REACTIVATE-AGENT': '#14f195'
+          };
+          const color = actionColors[action] || '#e0e0e0';
+          html += `<div class="detail-card"><div class="label">Action</div><div class="value" style="color:${color}">${action.replace(/-/g,' ')}</div></div>`;
+          for (const part of parts.slice(1)) {
+            const colonIdx = part.indexOf(': ');
+            if (colonIdx > -1) {
+              const label = part.slice(0, colonIdx);
+              const value = part.slice(colonIdx + 2);
+              html += `<div class="detail-card"><div class="label">${label}</div><div class="sub">${value}</div></div>`;
+            }
+          }
+          html += `<div class="detail-card"><div class="label">Full Description</div><div class="sub" style="word-break:break-all;">${description}</div></div>`;
+        }
+
+        document.getElementById('txDetails').innerHTML = html;
+
+        document.getElementById('connectSection').innerHTML = `
+          <div style="background:rgba(20,241,149,0.08);border:1px solid rgba(20,241,149,0.3);border-radius:10px;padding:16px;text-align:center;margin-bottom:12px;">
+            <div style="font-size:28px;margin-bottom:8px;">✅</div>
+            <div style="font-weight:700;color:var(--green);margin-bottom:4px;">Verified on mobile</div>
+            <div style="color:var(--muted);font-size:13px;">Go back to your desktop and click <strong style="color:white;">Continue to Sign</strong></div>
+          </div>`;
+
+        document.getElementById('loadingState').style.display = 'none';
+        document.getElementById('mainContent').style.display = 'block';
+
+      } catch (e) {
+        document.getElementById('loadingState').style.display = 'none';
+        document.getElementById('errorState').style.display = 'block';
+        document.getElementById('errorState').querySelector('.status-sub').textContent = 'Failed to decode: ' + e.message;
+      }
+    }
+
+    async function connectAndSign() {
+      document.getElementById('connectSection').style.display = 'none';
+      document.getElementById('connectingSection').style.display = 'block';
+      document.getElementById('connectingMsg').textContent = 'Initializing WalletConnect...';
+
+      try {
+        const SC = window.SignClient || window.WalletConnectSignClient?.SignClient || window['@walletconnect/sign-client']?.SignClient || window['@walletconnect/sign-client'];
+        if (!SC || (!SC.init && !SC.SignClient)) throw new Error('SignClient not loaded');
+        const SignClient = SC.init ? SC : SC.SignClient;
+        client = await SignClient.init({
+          projectId: PROJECT_ID, relayUrl: RELAY_URL,
+          metadata: { name: 'WalletDeploy Verify', description: 'Mobile transaction verification for WalletDeploy', url: 'https://walletdeploy.com/verify.html', icons: ['https://walletdeploy.com/favicon.ico'] },
+        });
+
+        const { uri, approval } = await client.connect({
+          requiredNamespaces: { solana: { methods: ['solana_signTransaction'], chains: [SOLANA_CHAIN], events: [] } },
+        });
+
+        if (uri) {
+          document.getElementById('connectingMsg').textContent = 'Scan QR code with your wallet app...';
+          document.getElementById('qrSection').style.display = 'block';
+          new QRCode(document.getElementById('qrcode'), { text: uri, width: 200, height: 200 });
+
+          // Also try deep link for same-device signing
+          const deepLink = `wc:${uri.split('wc:')[1]}`;
+          setTimeout(() => {
+            // Attempt to open Tangem or other wallet app via deep link
+            window.location.href = deepLink;
+          }, 500);
+        }
+
+        document.getElementById('connectingMsg').textContent = 'Waiting for wallet approval...';
+        session = await approval();
+
+        const connectedPubkey = session.namespaces.solana.accounts[0].split(':')[2];
+        document.getElementById('connectingMsg').textContent = `Connected: ${connectedPubkey.slice(0,8)}...${connectedPubkey.slice(-6)}`;
+        document.getElementById('qrSection').style.display = 'none';
+
+        // Sign the transaction
+        document.getElementById('connectingMsg').textContent = 'Tap your card to sign...';
+        const { Transaction, PublicKey } = solanaWeb3;
+        const { blockhash, lastValidBlockHeight } = await new solanaWeb3.Connection(RPC, 'confirmed').getLatestBlockhash('confirmed');
+
+        // Rebuild tx with fresh blockhash
+        const tx = txData.tx;
+        tx.recentBlockhash = blockhash;
+        tx.feePayer = new PublicKey(connectedPubkey);
+
+        const serialized = tx.serialize({ requireAllSignatures: false, verifySignatures: false });
+        let binary = '';
+        for (let i = 0; i < serialized.length; i++) binary += String.fromCharCode(serialized[i]);
+
+        const result = await client.request({
+          topic: session.topic, chainId: SOLANA_CHAIN,
+          request: { method: 'solana_signTransaction', params: { transaction: btoa(binary) } },
+        });
+
+        document.getElementById('connectingMsg').textContent = 'Broadcasting transaction...';
+
+        // Broadcast
+        const connection = new solanaWeb3.Connection(RPC, 'confirmed');
+        let rawTx;
+        if (result.signature) {
+          const B58 = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+          let n = BigInt(0);
+          for (const c of result.signature) n = n * BigInt(58) + BigInt(B58.indexOf(c));
+          const bytes = new Uint8Array(64);
+          for (let i = 63; i >= 0; i--) { bytes[i] = Number(n & BigInt(0xff)); n >>= BigInt(8); }
+          tx.addSignature(new PublicKey(connectedPubkey), bytes);
+          rawTx = tx.serialize();
+        } else if (result.transaction) {
+          const raw = result.transaction;
+          rawTx = raw.match(/^[0-9a-fA-F]+$/)
+            ? new Uint8Array(raw.match(/.{1,2}/g).map(b => parseInt(b, 16)))
+            : Uint8Array.from(atob(raw), c => c.charCodeAt(0));
+        }
+
+        const sig = await connection.sendRawTransaction(rawTx);
+
+        document.getElementById('connectingSection').style.display = 'none';
+        document.getElementById('successSection').style.display = 'block';
+        document.getElementById('successMsg').innerHTML = `Transaction confirmed.<br><a href="https://explorer.solana.com/tx/${sig}?cluster=mainnet-beta" target="_blank" rel="noopener noreferrer" style="color:var(--green);font-size:12px;font-family:monospace;">${sig.slice(0,16)}... View on Explorer →</a>`;
+
+      } catch (e) {
+        document.getElementById('connectingSection').style.display = 'none';
+        document.getElementById('errorSection').style.display = 'block';
+        document.getElementById('errorMsg').textContent = e.message;
+      }
+    }
+
+    init();
+  </script>
+
+</body>
+</html>
