@@ -145,8 +145,6 @@ Hardware Cold Wallet (Tangem, Ledger, Keystone)
 - On-chain BWD memo provides immutable audit record of every delegation
 - Crash recovery: deterministic keypair re-derivation enables buffer SOL recovery if session is lost
 
-See [EPHEMERAL_KEYPAIR_SECURITY.md](EPHEMERAL_KEYPAIR_SECURITY.md) for full security analysis.
-
 ---
 
 ## Files
