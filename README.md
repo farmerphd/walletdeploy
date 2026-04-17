@@ -178,8 +178,3 @@ MIT — see [LICENSE](LICENSE)
 
 *WalletDeploy — the universal administrative signing layer for blockchain.*  
 *Built Apr 9, 2026. First use: recovered 1.659 SOL from a locked Solana buffer using Tangem WalletConnect.*
-
----
-
-*WalletDeploy — the universal administrative signing layer for blockchain.*  
-*Built Apr 9, 2026. First use: recovered 1.659 SOL from a locked Solana buffer using Tangem WalletConnect.*
