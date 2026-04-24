@@ -4,7 +4,7 @@
 
 Any hardware cold wallet. Any on-chain administrative action. Any blockchain. Directly from a browser — no CLI, no middleware, no hot keys.
 
-**Live:** [walletdeploy.com](https://walletdeploy.com) · **GitHub:** [github.com/farmerphd/walletdeploy](https://github.com/farmerphd/walletdeploy) · **Patents Pending:** US 64/034,378 · US 64/041,067
+**Live:** [walletdeploy.com](https://walletdeploy.com) · **GitHub:** [github.com/farmerphd/walletdeploy](https://github.com/farmerphd/walletdeploy) · **Patents Pending:** US 64/034,378 · US 64/041,067 · US 64/047,615
 
 ---
 
@@ -34,23 +34,24 @@ Every blockchain has the same architectural pattern:
 | Extend Program | ✅ Live |
 | Set Buffer Authority | ✅ Live |
 | Recover SOL from Buffer | ✅ Live |
+| Close Program | ✅ Live |
 | Buffer Inspector (scan any wallet) | ✅ Live |
 | Program Inspector (scan any wallet) | ✅ Live |
 | Emergency Shutdown (sSLA agents) | ✅ Live |
 | On-chain memo audit trail | ✅ Live |
 | Mobile verify QR | ✅ Live |
 
-**Proven on mainnet:** Recovered 8.90 SOL across 4 locked buffers. Upgraded live programs. All signed via Tangem NFC + WalletConnect — no CLI, no hot keys.
+**Proven on mainnet:** 50+ SOL recovered from locked buffers. Upgraded live programs. First-ever browser-based Solana program deployment with hardware cold wallet (Apr 22, 2026). All signed via Tangem NFC + WalletConnect — no CLI, no hot keys.
 
 ---
 
-## Patent #17 — No-CLI Program Deployment
+## Patent — No-CLI Program Deployment
 
 US Provisional 64/041,067 (filed Apr 16, 2026)
 
 **Before WalletDeploy:**
-1. `solana program write-buffer ./program.so --buffer-authority COLD_WALLET` (CLI required)
-2. Open WalletDeploy, connect wallet, sign deploy (1 tap)
+1. `solana program write-buffer ./program.so` (CLI — hot keypair required, cold wallet can't sign)
+2. No path to deploy or upgrade with a hardware cold wallet — use a hot key or don't deploy
 
 **After WalletDeploy (deploy.html):**
 1. Drag `.so` file to browser
@@ -109,31 +110,13 @@ Hardware Cold Wallet (Tangem, Ledger, Keystone)
 - **Frontend:** Static HTML/CSS/JS — no framework, no build system
 - **RPC:** Helius API behind `/rpc` nginx proxy (API key never exposed)
 - **Hosting:** AWS EC2 (t3.micro), nginx, Let's Encrypt SSL
-- **WalletConnect:** Project ID `39ee2809cfbebffc3d74e5b28e8fc879`, Reown verified
 - **Keypair derivation:** TweetNaCl (universal browser support — Chrome, Firefox, Safari, Edge)
 
 ---
 
-## Roadmap
+## Coming Next
 
-### Phase 1: Solana (Now)
-- ✅ All BPFLoader program management operations
-- ✅ No-CLI deployment (Patent #17)
-- ⏳ Close Program
-- ⏳ Validator operations (UpdateCommission, WithdrawFromVote)
-- ⏳ Metaplex support
-
-### Phase 2: Generic Anchor IDL Support
-- IDL-driven instruction builder
-- WalletDeploy CLI (`walletdeploy-cli`)
-- VS Code extension
-
-### Phase 3: EVM
-- Proxy upgrades (UUPS, TransparentProxy)
-- Token administration (ERC-20/721/1155)
-- DeFi protocol administration
-
-### Phase 4+: Near, Sui, Aptos, Tangem Partnership
+EVM support (UUPS, TransparentProxy, ERC-20/721), Anchor IDL builder, CLI tool, VS Code extension.
 
 ---
 
@@ -144,6 +127,8 @@ Hardware Cold Wallet (Tangem, Ledger, Keystone)
 - Ephemeral keypair holds only fee SOL (~0.001 SOL) — no user funds at risk
 - On-chain BWD memo provides immutable audit record of every delegation
 - Crash recovery: deterministic keypair re-derivation enables buffer SOL recovery if session is lost
+- **Zero AI. Anywhere.** No AI-suggested transactions, no auto-fill, no inference layer, no ML models, no backend logic. Every instruction is deterministically constructed from your inputs, byte-for-byte verifiable before signing. What you see is exactly what gets signed — nothing more, nothing less.
+
 
 ---
 
@@ -152,9 +137,9 @@ Hardware Cold Wallet (Tangem, Ledger, Keystone)
 | File | Purpose |
 |------|---------|
 | `app.html` | Main tool — all Solana program management features |
+| `deploy.html` | No-CLI deploy/upgrade — Patent #17 |
 | `walletdeploy_index.html` | Landing page (served as index.html) |
 | `walletdeploy_verify.html` | Mobile transaction verification |
-
 
 ---
 
@@ -174,4 +159,4 @@ MIT — see [LICENSE](LICENSE)
 ---
 
 *WalletDeploy — the universal administrative signing layer for blockchain.*  
-*Built Apr 9, 2026. First use: recovered 1.659 SOL from a locked Solana buffer using Tangem WalletConnect.*
+*First use: recovered 1.659 SOL from a locked Solana buffer using Tangem WalletConnect.*
