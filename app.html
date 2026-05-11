@@ -81,6 +81,7 @@
     <a href="/" class="logo"><img src="/icon.png" style="height:40px;vertical-align:middle;margin-right:8px;">Wallet<span>Deploy</span></a>
     <div class="nav-right">
       <a href="/">← Back to home</a>
+      <a href="/app_devnet.html" style="color:#ffaa33;font-size:12px;">🧪 Test on Devnet</a>
     </div>
   </nav>
 
@@ -98,6 +99,9 @@
       <div id="qrcode"></div>
       <div id="badge" style="display:none" class="badge">✅ Connected: <span id="pk"></span></div>
       <button class="btn-connect" id="connectBtn" onclick="connectWallet()">Connect via WalletConnect</button>
+      <div id="orDivider" style="margin:12px 0;color:var(--muted);font-size:12px;">— or —</div>
+      <button id="phantomBtn" onclick="connectPhantom()" style="width:100%;padding:12px;border:2px solid #ab9ff2;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;margin-top:0;background:rgba(171,159,242,0.15);color:#ab9ff2;transition:all 0.2s;">👻 Connect Phantom (Browser Extension)</button>
+      <button id="solflareBtn" onclick="connectSolflare()" style="width:100%;padding:12px;border:2px solid #fc8c03;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;margin-top:8px;background:rgba(252,140,3,0.1);color:#fc8c03;transition:all 0.2s;">🔥 Connect Solflare (Browser Extension)</button>
     </div>
 
     <!-- Program Inspector -->
@@ -130,14 +134,9 @@
     <div class="section-label">Program Management — Solana</div>
 
     <div class="card" style="border-color:rgba(20,241,149,0.2);background:rgba(20,241,149,0.03);">
-      <h3 style="color:var(--green);">CLI Quick Reference</h3>
-      <div class="desc">Run these commands before using WalletDeploy. Replace addresses with your own.</div>
-      <label>Write buffer with cold wallet as authority (one step)</label>
-      <input readonly value="solana program write-buffer ./target/deploy/my_program.so --buffer-authority YOUR_COLD_WALLET --url mainnet-beta" onclick="this.select()" style="cursor:pointer;color:var(--green);" />
-      <label>Or transfer authority after writing (two steps)</label>
-      <input readonly value="solana program set-buffer-authority BUFFER_ADDRESS --new-buffer-authority YOUR_COLD_WALLET --url mainnet-beta" onclick="this.select()" style="cursor:pointer;" />
-      <label>Write buffer with priority fee (use during congestion)</label>
-      <input readonly value="solana program write-buffer ./target/deploy/my_program.so --buffer-authority YOUR_COLD_WALLET --with-compute-unit-price 50000 --url mainnet-beta" onclick="this.select()" style="cursor:pointer;" />
+      <h3 style="color:var(--green);">🚀 No-CLI Deploy &amp; Upgrade — Patent Pending (US 64/041,067)</h3>
+      <div class="desc">Deploy a new program or upgrade an existing one entirely from your browser. No CLI required. Two cold wallet taps. Any program size. Ephemeral keypair writes the buffer — cold wallet is upgrade authority from block 0.</div>
+      <a href="/deploy.html" style="display:block;width:100%;padding:12px;background:rgba(20,241,149,0.15);color:var(--green);border:1px solid rgba(20,241,149,0.3);border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;margin-top:12px;text-align:center;text-decoration:none;">Open Deploy / Upgrade Tool →</a>
     </div>
 
     <div class="card">
@@ -184,22 +183,20 @@
       <div class="status" id="extendStatus"></div>
     </div>
 
-    <div class="card">
-      <h3>Deploy Program</h3>
-      <div class="desc">Deploy a new program with your cold wallet as upgrade authority from block 0. Write the buffer via CLI first, then deploy here. <strong style="color:#ffaa33;">Note:</strong> The program keypair (one-time use) must also sign — generate a throwaway keypair with <code style="background:rgba(255,255,255,0.06);padding:1px 6px;border-radius:4px;">solana-keygen new -o program-keypair.json</code>, use it once to deploy, then discard it. Your cold wallet becomes the permanent upgrade authority.</div>
-      <label>Buffer Address</label>
-      <input id="deployBufferAddr" placeholder="Buffer account address" />
-      <label>Program Keypair Address</label>
-      <input id="deployProgramId" placeholder="New program address (from keypair file)" />
-      <label>Spill Address</label>
-      <input id="deploySpillAddr" placeholder="Receives leftover lamports" />
-      <button class="btn-action" id="deployBtn" onclick="deployProgram()" disabled>Deploy Program</button>
-      <div class="status" id="deployStatus"></div>
+    <div class="card" style="border-color:rgba(20,241,149,0.2);background:rgba(20,241,149,0.03);">
+      <h3 style="color:var(--green);">CLI Quick Reference <span style="color:var(--muted);font-size:12px;font-weight:400;">(for CLI-assisted upgrade only)</span></h3>
+      <div class="desc">Run these commands to write the buffer before using the Upgrade card below.</div>
+      <label>Write buffer with cold wallet as authority (one step)</label>
+      <input readonly value="solana program write-buffer ./target/deploy/my_program.so --buffer-authority YOUR_COLD_WALLET --url mainnet-beta" onclick="this.select()" style="cursor:pointer;color:var(--green);" />
+      <label>Or transfer authority after writing (two steps)</label>
+      <input readonly value="solana program set-buffer-authority BUFFER_ADDRESS --new-buffer-authority YOUR_COLD_WALLET --url mainnet-beta" onclick="this.select()" style="cursor:pointer;" />
+      <label>Write buffer with priority fee (use during congestion)</label>
+      <input readonly value="solana program write-buffer ./target/deploy/my_program.so --buffer-authority YOUR_COLD_WALLET --with-compute-unit-price 50000 --url mainnet-beta" onclick="this.select()" style="cursor:pointer;" />
     </div>
 
     <div class="card">
-      <h3>Upgrade Program</h3>
-      <div class="desc">Execute upgrade after writing buffer from CLI and setting buffer authority above.</div>
+      <h3>Upgrade Program <span style="color:var(--muted);font-size:12px;font-weight:400;">(CLI-assisted)</span></h3>
+      <div class="desc">Execute upgrade after writing buffer via CLI and setting buffer authority above. For no-CLI upgrade, use the <a href="/deploy.html" style="color:var(--green);">Deploy / Upgrade Tool</a>.</div>
       <label>Program ID</label>
       <input id="upgradeProgramId" placeholder="Program address" />
       <label>Buffer Address</label>
@@ -208,6 +205,28 @@
       <input id="spillAddr" placeholder="Receives leftover lamports" />
       <button class="btn-action" id="upgradeBtn" onclick="upgradeProgram()" disabled>Upgrade Program</button>
       <div class="status" id="upgradeStatus"></div>
+    </div>
+
+    <div class="card">
+      <h3>Close Program</h3>
+      <div class="desc">Permanently close a program and recover all locked SOL. <strong style="color:#ff6b6b;">⚠️ Irreversible — the Program ID is gone forever.</strong></div>
+      <label>Program ID</label>
+      <input id="closeProgramId" placeholder="Program address to close" />
+      <label>Recipient (receives SOL)</label>
+      <input id="closeProgramRecipient" placeholder="Your cold wallet address" />
+      <button class="btn-danger" id="closeProgramBtn" onclick="closeProgram()" disabled>Close Program &amp; Recover SOL</button>
+      <div class="status" id="closeProgramStatus"></div>
+    </div>
+
+    <div class="card" style="border-color:rgba(255,68,68,0.3);background:rgba(255,68,68,0.03);">
+      <h3 style="color:#ff6b6b;">🔒 Freeze Program — Remove Upgrade Authority Forever</h3>
+      <div class="desc">Permanently remove the upgrade authority. <strong style="color:#ff6b6b;">This is irreversible. Nobody — including you — can ever upgrade this program again.</strong> Use this when your program is fully audited and battle-tested. This is the gold standard for decentralization.</div>
+      <label>Program ID</label>
+      <input id="freezeProgramId" placeholder="Program address to freeze" />
+      <label style="color:#ff6b6b;">Type the Program ID again to confirm</label>
+      <input id="freezeProgramConfirm" placeholder="Confirm program address" />
+      <button class="btn-danger" id="freezeProgramBtn" onclick="freezeProgram()" disabled>🔒 Freeze Program — Remove Authority Forever</button>
+      <div class="status" id="freezeProgramStatus"></div>
     </div>
 
     <!-- Agent Management -->
@@ -258,8 +277,8 @@
     const RPC          = 'https://walletdeploy.com/rpc';
     const BPF_LOADER   = 'BPFLoaderUpgradeab1e11111111111111111111111';
 
-    const ALL_BTNS   = ['setBufBtn','closeBtn','authBtn','extendBtn','upgradeBtn','deployBtn','killBtn','reactivateBtn'];
-    const ALL_STATUS = ['setBufStatus','closeStatus','authStatus','extendStatus','upgradeStatus','killStatus','reactivateStatus'];
+    const ALL_BTNS   = ['setBufBtn','closeBtn','authBtn','extendBtn','upgradeBtn','closeProgramBtn','freezeProgramBtn','killBtn','reactivateBtn'];
+    const ALL_STATUS = ['setBufStatus','closeStatus','authStatus','extendStatus','upgradeStatus','closeProgramStatus','freezeProgramStatus','killStatus','reactivateStatus'];
 
     let client = null, session = null, connectedPubkey = null;
 
@@ -271,6 +290,51 @@
 
     function allButtons(disabled) {
       ALL_BTNS.forEach(id => document.getElementById(id).disabled = disabled);
+    }
+
+    async function connectSolflare() {
+      if (!window.solflare?.isSolflare) { alert('Solflare extension not found. Install it at solflare.com'); return; }
+      document.getElementById('solflareBtn').disabled = true;
+      try {
+        await window.solflare.connect();
+        connectedPubkey = window.solflare.publicKey.toString();
+        document.getElementById('qrcode').innerHTML = '';
+        document.getElementById('badge').style.display = 'inline-flex';
+        document.getElementById('pk').textContent = connectedPubkey.slice(0,8) + '...' + connectedPubkey.slice(-8);
+        document.getElementById('connectBtn').style.display = 'none';
+        document.getElementById('phantomBtn').style.display = 'none';
+        document.getElementById('solflareBtn').style.display = 'none';
+        document.getElementById('orDivider').style.display = 'none';
+        allButtons(false);
+        if (!document.getElementById('scanProgramWallet').value) document.getElementById('scanProgramWallet').value = connectedPubkey;
+        if (!document.getElementById('scanWallet').value) document.getElementById('scanWallet').value = connectedPubkey;
+        if (!document.getElementById('setBufNewAuth').value) document.getElementById('setBufNewAuth').value = connectedPubkey;
+        if (!document.getElementById('closeProgramRecipient').value) document.getElementById('closeProgramRecipient').value = connectedPubkey;
+        window._useSolflare = true;
+      } catch(e) { alert('Solflare connect failed: ' + e.message); }
+      document.getElementById('solflareBtn').disabled = false;
+    }
+
+    async function connectPhantom() {
+      if (!window.solana?.isPhantom) { alert('Phantom extension not found. Install it at phantom.app'); return; }
+      document.getElementById('phantomBtn').disabled = true;
+      try {
+        const resp = await window.solana.connect();
+        connectedPubkey = resp.publicKey.toString();
+        document.getElementById('qrcode').innerHTML = '';
+        document.getElementById('badge').style.display = 'inline-flex';
+        document.getElementById('pk').textContent = connectedPubkey.slice(0,8) + '...' + connectedPubkey.slice(-8);
+        document.getElementById('connectBtn').style.display = 'none';
+        document.getElementById('phantomBtn').style.display = 'none';
+        document.getElementById('orDivider').style.display = 'none';
+        allButtons(false);
+        if (!document.getElementById('scanProgramWallet').value) document.getElementById('scanProgramWallet').value = connectedPubkey;
+        if (!document.getElementById('scanWallet').value) document.getElementById('scanWallet').value = connectedPubkey;
+        if (!document.getElementById('setBufNewAuth').value) document.getElementById('setBufNewAuth').value = connectedPubkey;
+        if (!document.getElementById('closeProgramRecipient').value) document.getElementById('closeProgramRecipient').value = connectedPubkey;
+        window._usePhantom = true;
+      } catch(e) { alert('Phantom connect failed: ' + e.message); }
+      document.getElementById('phantomBtn').disabled = false;
     }
 
     async function connectWallet() {
@@ -298,11 +362,12 @@
         document.getElementById('badge').style.display = 'inline-flex';
         document.getElementById('pk').textContent = connectedPubkey.slice(0,8) + '...' + connectedPubkey.slice(-8);
         document.getElementById('connectBtn').style.display = 'none';
+        document.getElementById('orDivider').style.display = 'none';
         allButtons(false);
         if (!document.getElementById('scanProgramWallet').value) document.getElementById('scanProgramWallet').value = connectedPubkey;
         if (!document.getElementById('scanWallet').value) document.getElementById('scanWallet').value = connectedPubkey;
-        if (!document.getElementById('deploySpillAddr').value) document.getElementById('deploySpillAddr').value = connectedPubkey;
         if (!document.getElementById('setBufNewAuth').value) document.getElementById('setBufNewAuth').value = connectedPubkey;
+        if (!document.getElementById('closeProgramRecipient').value) document.getElementById('closeProgramRecipient').value = connectedPubkey;
 
         // Listen for wallet disconnect
         client.on('session_delete', () => {
@@ -316,8 +381,8 @@
           // Clear auto-filled wallet-specific fields only
           document.getElementById('recipientAddr').value = '';
           document.getElementById('spillAddr').value = '';
-          document.getElementById('deploySpillAddr').value = '';
           document.getElementById('setBufNewAuth').value = '';
+          document.getElementById('closeProgramRecipient').value = '';
         });
 
         client.on('session_expire', () => {
@@ -331,8 +396,8 @@
           // Clear auto-filled wallet-specific fields only
           document.getElementById('recipientAddr').value = '';
           document.getElementById('spillAddr').value = '';
-          document.getElementById('deploySpillAddr').value = '';
           document.getElementById('setBufNewAuth').value = '';
+          document.getElementById('closeProgramRecipient').value = '';
         });
       } catch (e) {
         document.getElementById('connectBtn').disabled = false;
@@ -432,24 +497,43 @@
       const serialized = tx.serialize({ requireAllSignatures: false, verifySignatures: false });
       let binary = '';
       for (let i = 0; i < serialized.length; i++) binary += String.fromCharCode(serialized[i]);
-      setStatus(statusId, '⏳ Tap your card to sign...', 'loading');
-      const result = await client.request({
-        topic: session.topic, chainId: SOLANA_CHAIN,
-        request: { method: 'solana_signTransaction', params: { transaction: btoa(binary) } },
-      });
-      setStatus(statusId, '⏳ Signed — broadcasting to Solana...', 'loading');
-
       let rawTx;
-      if (result.signature) {
-        tx.addSignature(new solanaWeb3.PublicKey(connectedPubkey), b58decode(result.signature));
-        rawTx = tx.serialize();
-      } else if (result.transaction) {
-        const raw = result.transaction;
-        rawTx = raw.match(/^[0-9a-fA-F]+$/)
-          ? new Uint8Array(raw.match(/.{1,2}/g).map(b => parseInt(b, 16)))
-          : Uint8Array.from(atob(raw), c => c.charCodeAt(0));
+      if (window._usePhantom) {
+        setStatus(statusId, '⏳ Approve in Phantom...', 'loading');
+        // Use signAndSendTransaction with skipPreflight:true — standard pattern for BPFLoader (same as Solana CLI)
+        const { signature } = await window.solana.signAndSendTransaction(tx, { skipPreflight: true });
+        setStatus(statusId, '⏳ Confirming transaction...', 'loading');
+        const start = Date.now();
+        while (Date.now() - start < 90000) {
+          await new Promise(r => setTimeout(r, 2000));
+          const status = await connection.getSignatureStatus(signature, { searchTransactionHistory: true });
+          if (status?.value?.err) throw new Error('Transaction failed: ' + JSON.stringify(status.value.err));
+          if (status?.value?.confirmationStatus === 'confirmed' || status?.value?.confirmationStatus === 'finalized') return signature;
+        }
+        return signature;
+      } else if (window._useSolflare) {
+        setStatus(statusId, '⏳ Approve in Solflare...', 'loading');
+        const signed = await window.solflare.signTransaction(tx);
+        rawTx = signed.serialize();
       } else {
-        throw new Error('Unexpected wallet response');
+        setStatus(statusId, '⏳ Tap your card to sign...', 'loading');
+        const result = await client.request({
+          topic: session.topic, chainId: SOLANA_CHAIN,
+          request: { method: 'solana_signTransaction', params: { transaction: btoa(binary) } },
+        });
+        setStatus(statusId, '⏳ Signed — broadcasting to Solana...', 'loading');
+
+        if (result.signature) {
+          tx.addSignature(new solanaWeb3.PublicKey(connectedPubkey), b58decode(result.signature));
+          rawTx = tx.serialize();
+        } else if (result.transaction) {
+          const raw = result.transaction;
+          rawTx = raw.match(/^[0-9a-fA-F]+$/)
+            ? new Uint8Array(raw.match(/.{1,2}/g).map(b => parseInt(b, 16)))
+            : Uint8Array.from(atob(raw), c => c.charCodeAt(0));
+        } else {
+          throw new Error('Unexpected wallet response');
+        }
       }
 
       // Retry loop — resubmit up to 3 times on blockhash expiry
@@ -472,6 +556,8 @@
           throw new Error('Confirmation timeout');
         } catch (e) {
           const isExpiry = e.message && (e.message.includes('block height exceeded') || e.message.includes('Blockhash not found'));
+          const isAlreadyProcessed = e.message && e.message.includes('already been processed');
+          if (isAlreadyProcessed) return null;
           if (isExpiry && attempt < 3) {
             setStatus(statusId, `⏳ Blockhash expired — retrying (attempt ${attempt + 1}/3)...`, 'loading');
             // Fetch fresh blockhash and rebroadcast
@@ -571,6 +657,8 @@
             <td>
               <button class="btn-action action-btn" onclick="prefillUpgrade('${programId}','${walletAddr}')">Upgrade</button>
               <button class="btn-action action-btn" onclick="prefillTransfer('${programId}','${walletAddr}')">Transfer Auth</button>
+              <button class="btn-danger action-btn" onclick="prefillClose('${programId}','${walletAddr}')">Close</button>
+              <button class="btn-danger action-btn" onclick="prefillFreeze('${programId}')">Freeze</button>
             </td>
           </tr>`;
         }
@@ -580,14 +668,17 @@
       document.getElementById('scanProgramBtn').disabled = false;
     }
 
-    function prefillUpgrade(programId, spillAddr) {
-      document.getElementById('upgradeProgramId').value = programId;
-      document.getElementById('upgradeBufferAddr').value = '';
-      document.getElementById('spillAddr').value = spillAddr;
-      const card = document.getElementById('upgradeBtn').closest('.card');
-      card.style.borderColor = 'var(--green)';
+    function prefillClose(programId, recipientAddr) {
+      document.getElementById('closeProgramId').value = programId;
+      document.getElementById('closeProgramRecipient').value = recipientAddr;
+      const card = document.getElementById('closeProgramBtn').closest('.card');
+      card.style.borderColor = '#ff6b6b';
       setTimeout(() => { card.style.borderColor = ''; }, 3000);
       card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function prefillUpgrade(programId, spillAddr) {
+      window.location.href = `/deploy.html?mode=upgrade&program=${programId}`;
     }
 
     function prefillTransfer(programId, walletAddr) {
@@ -615,7 +706,7 @@
           ]
         });
         // Filter to only buffer accounts (discriminator byte 1 at offset 0)
-        const buffers = accounts.filter(({ account }) => account.data[0] === 1);
+        const buffers = accounts.filter(({ account }) => account.data[0] === 1 && account.lamports > 0);
         if (buffers.length === 0) {
           setStatus('scanStatus', '✅ No locked buffers found for this wallet.', 'success');
           document.getElementById('scanBtn').disabled = false;
@@ -638,6 +729,15 @@
         document.getElementById('scanResults').innerHTML = html;
       } catch (e) { setStatus('scanStatus', '❌ ' + e.message, 'error'); }
       document.getElementById('scanBtn').disabled = false;
+    }
+
+    function prefillFreeze(programId) {
+      document.getElementById('freezeProgramId').value = programId;
+      document.getElementById('freezeProgramConfirm').value = '';
+      const card = document.getElementById('freezeProgramBtn').closest('.card');
+      card.style.borderColor = '#ff6b6b';
+      setTimeout(() => { card.style.borderColor = 'rgba(255,68,68,0.3)'; }, 3000);
+      card.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
     function prefillRecover(bufferAddr, recipientAddr) {
@@ -749,42 +849,6 @@
       document.getElementById('extendBtn').disabled = false;
     }
 
-    async function deployProgram() {
-      document.getElementById('deployBtn').disabled = true;
-      setStatus('deployStatus', 'Building transaction...', 'loading');
-      try {
-        const { Connection, PublicKey, TransactionInstruction, SystemProgram } = solanaWeb3;
-        const bufferAddr  = new PublicKey(document.getElementById('deployBufferAddr').value.trim());
-        const programId   = new PublicKey(document.getElementById('deployProgramId').value.trim());
-        const spillAddr   = new PublicKey(document.getElementById('deploySpillAddr').value.trim());
-        const authorityPk = new PublicKey(connectedPubkey);
-        const [programDataAddr] = await PublicKey.findProgramAddress([programId.toBytes()], new PublicKey(BPF_LOADER));
-        setStatus('deployStatus', 'Building deploy transaction...', 'loading');
-        // DeployWithMaxDataLen instruction (discriminator 1)
-        const dataLen = new Uint8Array(8);
-        // max_data_len = 0 means use buffer size — runtime infers from buffer account
-        dataLen[0] = 1;
-        const ix = new TransactionInstruction({
-          programId: new PublicKey(BPF_LOADER),
-          keys: [
-            { pubkey: authorityPk,                                                          isSigner: true,  isWritable: true  }, // payer
-            { pubkey: programDataAddr,                                                      isSigner: false, isWritable: true  }, // programdata
-            { pubkey: programId,                                                            isSigner: true,  isWritable: true  }, // program
-            { pubkey: bufferAddr,                                                           isSigner: false, isWritable: true  }, // buffer
-            { pubkey: spillAddr,                                                            isSigner: false, isWritable: true  }, // spill
-            { pubkey: new PublicKey('SysvarRent111111111111111111111111111111111'),         isSigner: false, isWritable: false }, // rent
-            { pubkey: new PublicKey('SysvarC1ock11111111111111111111111111111111'),        isSigner: false, isWritable: false }, // clock
-            { pubkey: SystemProgram.programId,                                             isSigner: false, isWritable: false }, // system
-            { pubkey: authorityPk,                                                          isSigner: true,  isWritable: false }, // upgrade authority
-          ],
-          data: dataLen,
-        });
-        const sig = await signAndSend(ix, 'deployStatus', `DEPLOY-PROGRAM | Program: ${document.getElementById('deployProgramId').value.trim()} | Buffer: ${document.getElementById('deployBufferAddr').value.trim()}`);
-        setStatusHtml('deployStatus', '✅ Program deployed! Your cold wallet is upgrade authority.' + explorerUrl(sig), 'success');
-      } catch (e) { setStatus('deployStatus', '❌ ' + e.message, 'error'); }
-      document.getElementById('deployBtn').disabled = false;
-    }
-
     async function upgradeProgram() {
       document.getElementById('upgradeBtn').disabled = true;
       setStatus('upgradeStatus', 'Looking up ProgramData...', 'loading');
@@ -812,6 +876,63 @@
         setStatusHtml('upgradeStatus', '✅ Program upgraded!' + explorerUrl(sig), 'success');
       } catch (e) { setStatus('upgradeStatus', '❌ ' + e.message, 'error'); }
       document.getElementById('upgradeBtn').disabled = false;
+    }
+
+    async function closeProgram() {
+      const programIdStr = document.getElementById('closeProgramId').value.trim();
+      const recipientStr = document.getElementById('closeProgramRecipient').value.trim();
+      if (!programIdStr) { setStatus('closeProgramStatus', '❌ Enter a program address', 'error'); return; }
+      if (!recipientStr) { setStatus('closeProgramStatus', '❌ Enter a recipient address', 'error'); return; }
+      if (!confirm(`⚠️ IRREVERSIBLE: Close program ${programIdStr}?\n\nThe Program ID will be gone forever. SOL will be returned to ${recipientStr}.\n\nAre you sure?`)) return;
+      document.getElementById('closeProgramBtn').disabled = true;
+      setStatus('closeProgramStatus', 'Looking up ProgramData...', 'loading');
+      try {
+        const { PublicKey, TransactionInstruction } = solanaWeb3;
+        const programId = new PublicKey(programIdStr);
+        const recipient = new PublicKey(recipientStr);
+        const [programDataAddr] = await PublicKey.findProgramAddress([programId.toBytes()], new PublicKey(BPF_LOADER));
+        const ix = new TransactionInstruction({
+          programId: new PublicKey(BPF_LOADER),
+          keys: [
+            { pubkey: programDataAddr,                isSigner: false, isWritable: true  }, // ProgramData
+            { pubkey: recipient,                      isSigner: false, isWritable: true  }, // recipient
+            { pubkey: new PublicKey(connectedPubkey), isSigner: true,  isWritable: false }, // authority
+            { pubkey: programId,                      isSigner: false, isWritable: true  }, // Program
+          ],
+          data: new Uint8Array([5, 0, 0, 0]),
+        });
+        const sig = await signAndSend(ix, 'closeProgramStatus', `CLOSE-PROGRAM | Program: ${programIdStr} | Recipient: ${recipientStr}`);
+        setStatusHtml('closeProgramStatus', '✅ Program closed! SOL recovered.' + explorerUrl(sig), 'success');
+      } catch (e) { setStatus('closeProgramStatus', '❌ ' + e.message, 'error'); }
+      document.getElementById('closeProgramBtn').disabled = false;
+    }
+
+    async function freezeProgram() {
+      const programIdStr = document.getElementById('freezeProgramId').value.trim();
+      const confirmStr   = document.getElementById('freezeProgramConfirm').value.trim();
+      if (!programIdStr) { setStatus('freezeProgramStatus', '❌ Enter a program address', 'error'); return; }
+      if (programIdStr !== confirmStr) { setStatus('freezeProgramStatus', '❌ Program IDs do not match. Type the program ID exactly in both fields.', 'error'); return; }
+      if (!confirm(`⚠️ PERMANENT AND IRREVERSIBLE\n\nFreezing program: ${programIdStr}\n\nThis will remove the upgrade authority permanently. Nobody \u2014 including you \u2014 can ever upgrade this program again.\n\nAre you absolutely sure?`)) return;
+      document.getElementById('freezeProgramBtn').disabled = true;
+      setStatus('freezeProgramStatus', 'Looking up ProgramData...', 'loading');
+      try {
+        const { PublicKey, TransactionInstruction } = solanaWeb3;
+        const programId = new PublicKey(programIdStr);
+        const [programDataAddr] = await PublicKey.findProgramAddress([programId.toBytes()], new PublicKey(BPF_LOADER));
+        // SetUpgradeAuthority with None = System Program as new authority signals immutability
+        const ix = new TransactionInstruction({
+          programId: new PublicKey(BPF_LOADER),
+          keys: [
+            { pubkey: programDataAddr,                                              isSigner: false, isWritable: true  },
+            { pubkey: new PublicKey(connectedPubkey),                               isSigner: true,  isWritable: false },
+            // No new authority account = remove authority
+          ],
+          data: new Uint8Array([4, 0, 0, 0, 0]), // SetUpgradeAuthority with Option::None
+        });
+        const sig = await signAndSend(ix, 'freezeProgramStatus', `FREEZE-PROGRAM | Program: ${programIdStr} | Authority: REMOVED PERMANENTLY`);
+        setStatusHtml('freezeProgramStatus', '🔒 Program frozen. Upgrade authority removed permanently. This program can never be upgraded again.' + explorerUrl(sig), 'success');
+      } catch (e) { setStatus('freezeProgramStatus', '❌ ' + e.message, 'error'); }
+      document.getElementById('freezeProgramBtn').disabled = false;
     }
 
     async function emergencyShutdown() {
