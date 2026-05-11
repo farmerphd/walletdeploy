@@ -1,10 +1,12 @@
 # WalletDeploy
 
-**The universal administrative signing layer for blockchain.**
+The universal administrative signing layer for blockchain.
 
 Any hardware cold wallet. Any on-chain administrative action. Any blockchain. Directly from a browser — no CLI, no middleware, no hot keys.
 
-**Live:** [walletdeploy.com](https://walletdeploy.com) · **GitHub:** [github.com/farmerphd/walletdeploy](https://github.com/farmerphd/walletdeploy) · **Patents Pending:** US 64/034,378 · US 64/041,067 · US 64/047,615
+**Live:** [walletdeploy.com](https://walletdeploy.com) · **GitHub:** [github.com/farmerphd/walletdeploy](https://github.com/farmerphd/walletdeploy) · **Patents Pending:** US 64/034,378 · US 64/041,067 · US 64/047,615 · US 64/054,668
+
+**🏛️ Submitted to [Colosseum Frontier Hackathon](https://www.colosseum.org/)**
 
 ---
 
@@ -28,38 +30,55 @@ Every blockchain has the same architectural pattern:
 | Feature | Status |
 |---------|--------|
 | Upgrade Program | ✅ Live |
-| Deploy Program (CLI writes buffer) | ✅ Live |
 | Deploy Program (No CLI — Patent #17) | ✅ Live |
 | Transfer Upgrade Authority | ✅ Live |
 | Extend Program | ✅ Live |
 | Set Buffer Authority | ✅ Live |
 | Recover SOL from Buffer | ✅ Live |
 | Close Program | ✅ Live |
+| **Freeze Program** (irreversible — remove authority forever) | ✅ Live |
 | Buffer Inspector (scan any wallet) | ✅ Live |
 | Program Inspector (scan any wallet) | ✅ Live |
 | Emergency Shutdown (sSLA agents) | ✅ Live |
 | On-chain memo audit trail | ✅ Live |
 | Mobile verify QR | ✅ Live |
+| **VS Code Extension** | ✅ [Marketplace](https://marketplace.visualstudio.com/items?itemName=CompuStableInc.walletdeploy) |
 
-**Proven on mainnet:** 50+ SOL recovered from locked buffers. Upgraded live programs. First-ever browser-based Solana program deployment with hardware cold wallet (Apr 22, 2026). All signed via Tangem NFC + WalletConnect — no CLI, no hot keys.
+**Proven on mainnet:** 50+ SOL recovered from locked buffers. Upgraded live programs. First-ever browser-based Solana program deployment with hardware cold wallet. All signed via Tangem NFC + WalletConnect — no CLI, no hot keys.
+
+---
+
+## Wallets Supported
+
+| Wallet | Connection | Status |
+|--------|-----------|--------|
+| 👻 Phantom | Browser extension | ✅ Live |
+| 🔥 Solflare | Browser extension | ✅ Live |
+| 🟣 Tangem | WalletConnect (NFC) | ✅ Live |
+| 🔷 Keystone | WalletConnect (QR) | ✅ Live |
+| ⬛ Ngrave | WalletConnect (QR) | ✅ Live |
+| 🔲 Ellipal | WalletConnect (Air-gapped) | ✅ Live |
+| Any WalletConnect v2 wallet | QR code | ✅ Live |
+
+Start with Phantom or Solflare (no hardware wallet needed). Graduate to cold storage when your program has real value on mainnet.
 
 ---
 
 ## Patent — No-CLI Program Deployment
 
-US Provisional 64/041,067 (filed Apr 16, 2026)
-
 **Before WalletDeploy:**
-1. `solana program write-buffer ./program.so` (CLI — hot keypair required, cold wallet can't sign)
-2. No path to deploy or upgrade with a hardware cold wallet — use a hot key or don't deploy
+```
+solana program write-buffer ./program.so  (CLI — hot keypair required)
+# No path to deploy or upgrade with a hardware cold wallet
+```
 
 **After WalletDeploy (deploy.html):**
-1. Drag `.so` file to browser
+1. Drag .so file to browser
 2. Tap cold wallet once — funds ephemeral keypair, creates buffer, records on-chain BWD delegation memo
 3. Browser writes all chunks automatically — no wallet interaction
 4. Tap cold wallet once — deploy or upgrade
 
-Two cold wallet taps. Any program size. Any browser. No terminal.
+**Two cold wallet taps. Any program size. Any browser. No terminal.**
 
 ### Delegated Ephemeral Keypair
 
@@ -75,12 +94,38 @@ Every deployment records an immutable, cold-wallet-signed memo on Solana:
   "authority": "ColdWalletPubkey",
   "delegate": "EphemeralPubkey",
   "buffer": "BufferPubkey",
-  "expires": 1776368879,
   "maxBytes": 184904
 }
 ```
 
 This creates a compliance-grade audit trail that no CLI tool can match. Addresses GENIUS Act (stablecoin governance) and CLARITY Act (upgrade authority decentralization) requirements.
+
+---
+
+## VS Code Extension
+
+Search **"WalletDeploy"** in the VS Code Marketplace or install directly: [CompuStableInc.walletdeploy](https://marketplace.visualstudio.com/items?itemName=CompuStableInc.walletdeploy)
+
+**Features:**
+- CodeLens on `declare_id!()` macros — inline Upgrade / Transfer Authority buttons
+- Hover info on program IDs — shows authority, data size, upgradeable status
+- No-CLI Deploy & Upgrade — same ephemeral keypair flow as deploy.html
+- All admin operations: Transfer Authority, Recover SOL, Extend, Close, Freeze
+- Scan for Programs You Control / Scan for Locked Buffers
+- Phantom, Solflare (via local bridge), WalletConnect (via QR)
+- On-chain memo audit trail on every operation
+
+---
+
+## Freeze Program
+
+Permanently remove upgrade authority. Irreversible. The gold standard for decentralization.
+
+- Calls `SetUpgradeAuthority` with `None` as the new authority
+- UI requires typing the program ID twice to confirm
+- Explicit warning: "This is permanent and irreversible"
+- On success: Solana Explorer link + shareable on-chain proof that program is frozen
+- **Compliance angle**: Frozen program is the strongest CLARITY Act decentralization argument
 
 ---
 
@@ -99,7 +144,8 @@ This creates a compliance-grade audit trail that no CLI tool can match. Addresse
 
 ```
 Hardware Cold Wallet (Tangem, Ledger, Keystone)
-        ↓ WalletConnect
+    or Phantom / Solflare (browser extension)
+        ↓ WalletConnect / window.solana / window.solflare
     Browser (deploy.html / app.html)
         ↓ Solana web3.js
     Solana Mainnet RPC
@@ -114,9 +160,23 @@ Hardware Cold Wallet (Tangem, Ledger, Keystone)
 
 ---
 
+## Devnet Testing
+
+Test all features without real SOL:
+
+- **[walletdeploy.com/app_devnet.html](https://walletdeploy.com/app_devnet.html)** — full devnet admin tool
+- **[walletdeploy.com/deploy_devnet.html](https://walletdeploy.com/deploy_devnet.html)** — devnet deploy/upgrade
+
+Works with Phantom browser extension (import a devnet keypair) or any WalletConnect wallet pointed at devnet.
+
+---
+
 ## Coming Next
 
-EVM support (UUPS, TransparentProxy, ERC-20/721), Anchor IDL builder, CLI tool, VS Code extension.
+- CLI tool (`npm install -g walletdeploy-cli`)
+- EVM support (UUPS, TransparentProxy, ERC-20/721)
+- Anchor IDL instruction builder
+- CI/CD human-in-the-loop signing
 
 ---
 
@@ -129,7 +189,6 @@ EVM support (UUPS, TransparentProxy, ERC-20/721), Anchor IDL builder, CLI tool, 
 - Crash recovery: deterministic keypair re-derivation enables buffer SOL recovery if session is lost
 - **Zero AI. Anywhere.** No AI-suggested transactions, no auto-fill, no inference layer, no ML models, no backend logic. Every instruction is deterministically constructed from your inputs, byte-for-byte verifiable before signing. What you see is exactly what gets signed — nothing more, nothing less.
 
-
 ---
 
 ## Files
@@ -137,7 +196,9 @@ EVM support (UUPS, TransparentProxy, ERC-20/721), Anchor IDL builder, CLI tool, 
 | File | Purpose |
 |------|---------|
 | `app.html` | Main tool — all Solana program management features |
-| `deploy.html` | No-CLI deploy/upgrade — Patent #17 |
+| `app_devnet.html` | Devnet version — Phantom extension support, orange banner |
+| `deploy.html` | No-CLI deploy/upgrade |
+| `deploy_devnet.html` | Devnet version of deploy.html |
 | `walletdeploy_index.html` | Landing page (served as index.html) |
 | `walletdeploy_verify.html` | Mobile transaction verification |
 
@@ -154,9 +215,10 @@ MIT — see [LICENSE](LICENSE)
 - **Site:** [walletdeploy.com](https://walletdeploy.com)
 - **GitHub:** [github.com/farmerphd/walletdeploy](https://github.com/farmerphd/walletdeploy)
 - **Email:** dev@walletdeploy.com
-- **Built by:** [Steve Farmer](https://x.com/Compustable), [CompuStable Inc.](https://compustable.com)
+- **Twitter:** [@Compustable](https://x.com/Compustable)
 
 ---
 
-*WalletDeploy — the universal administrative signing layer for blockchain.*  
+**WalletDeploy** — the universal administrative signing layer for blockchain.
+
 *First use: recovered 1.659 SOL from a locked Solana buffer using Tangem WalletConnect.*
