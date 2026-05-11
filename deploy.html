@@ -26,7 +26,7 @@
     .page-sub { color: var(--muted); font-size: 15px; margin-bottom: 32px; }
     .mode-toggle { display: flex; gap: 0; margin-bottom: 32px; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
     .mode-btn { flex: 1; padding: 12px; background: transparent; border: none; color: var(--muted); font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
-    .mode-btn.active { background: rgba(153,69,255,0.15); color: var(--purple); }
+    .mode-btn.active { background: var(--purple); color: white; box-shadow: 0 0 12px rgba(153,69,255,0.4); }
     .connect-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 28px; margin-bottom: 24px; text-align: center; }
     .connect-card h3 { font-size: 16px; font-weight: 600; margin-bottom: 16px; }
     #qrcode { margin: 16px auto; display: inline-block; }
@@ -101,6 +101,9 @@
     <div id="badge" style="display:none" class="badge">✅ Connected: <span id="pk"></span></div>
     <div id="signAllBadge" class="sign-all-badge">⚡ One-tap mode available</div>
     <button class="btn-connect" id="connectBtn" onclick="connectWallet()">Connect via WalletConnect</button>
+    <div id="orDivider" style="margin:12px 0;color:#aaa;font-size:12px;">— or —</div>
+    <button id="phantomBtn" onclick="connectPhantom()" style="width:100%;padding:12px;border:2px solid #ab9ff2;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;margin-top:0;background:rgba(171,159,242,0.15);color:#ab9ff2;">👻 Connect Phantom (Browser Extension)</button>
+    <button id="solflareBtn" onclick="connectSolflare()" style="width:100%;padding:12px;border:2px solid #fc8c03;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;margin-top:8px;background:rgba(252,140,3,0.1);color:#fc8c03;">🔥 Connect Solflare (Browser Extension)</button>
   </div>
 
   <div class="card" id="step2Card">
@@ -119,7 +122,7 @@
 
   <div class="card disabled" id="step3Card">
     <h3>Step 3 — Tap 1: Authorize & Fund</h3>
-    <div class="desc" id="tap1Desc">Cold wallet signs one transaction: funds ephemeral keypair + creates buffer + records on-chain BWD delegation memo.</div>
+    <div class="desc" id="tap1Desc">Cold wallet signs one transaction: funds ephemeral keypair. Buffer created automatically. BWD memo recorded on-chain.</div>
     <button class="btn-action" id="tap1Btn" onclick="doTap1()">Tap 1 — Authorize & Fund</button>
     <div class="status" id="tap1Status"></div>
   </div>
@@ -138,6 +141,7 @@
   <div class="card disabled" id="step5Card">
     <h3>Step 5 — Tap 2: <span id="tap2Label">Deploy</span></h3>
     <div class="desc" id="tap2Desc">Two wallet taps: (1) SetBufferAuthority transfers buffer to cold wallet, (2) Deploy instruction. Cold wallet = upgrade authority from block 0. Buffer rent refunded.</div>
+    <div class="warning" style="margin:12px 0;font-size:12px;">⚠️ Your wallet may show a "malicious" or "unverified domain" warning on these taps. This is a false positive — BPFLoader program management instructions cannot be simulated by wallet security engines. It is safe to approve.</div>
     <div id="newDeployFields">
       <div class="program-id-display" id="programIdDisplay"></div>
     </div>
@@ -162,6 +166,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@1.95.3/lib/index.iife.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@walletconnect/sign-client@2.11.2/dist/index.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
 <script>
   const PROJECT_ID   = '39ee2809cfbebffc3d74e5b28e8fc879';
   const RELAY_URL    = 'wss://relay.walletconnect.com';
@@ -247,6 +252,24 @@
     document.getElementById('tap2Desc').textContent           = m === 'new'
       ? 'Two wallet taps: (1) SetBufferAuthority transfers buffer to cold wallet, (2) Deploy instruction. Cold wallet = upgrade authority from block 0. Buffer rent refunded.'
       : 'Two wallet taps: (1) SetBufferAuthority transfers buffer to cold wallet, (2) Upgrade instruction. Cold wallet = upgrade authority. Buffer rent refunded.';
+    // Reset UI state
+    ['tap1Status','writeStatus','tap2Status'].forEach(id => {
+      const el = document.getElementById(id);
+      el.textContent = ''; el.className = 'status';
+    });
+    document.getElementById('progressWrap').classList.remove('show');
+    document.getElementById('progressFill').style.width = '0%';
+    document.getElementById('progressText').textContent = '';
+    document.getElementById('programIdDisplay').classList.remove('show');
+    document.getElementById('programIdDisplay').textContent = '';
+    document.getElementById('existingProgramId').value = '';
+    document.getElementById('cancelBtn').style.display = 'none';
+    document.getElementById('tap1Btn').disabled = false;
+    document.getElementById('tap2Btn').disabled = false;
+    disableCard('step3Card');
+    disableCard('step4Card');
+    disableCard('step5Card');
+    if (programBytes && connectedPubkey) enableCard('step3Card');
   }
 
   // ── Session Storage ────────────────────────────────────────────
@@ -375,6 +398,49 @@
     if (programBytes && connectedPubkey) enableCard('step3Card');
   }
   // ── WalletConnect ──────────────────────────────────────────────
+  async function connectSolflare() {
+    if (!window.solflare?.isSolflare) { alert('Solflare extension not found. Install it at solflare.com'); return; }
+    document.getElementById('solflareBtn').disabled = true;
+    try {
+      await window.solflare.connect();
+      connectedPubkey = window.solflare.publicKey.toString();
+      document.getElementById('qrcode').innerHTML = '';
+      document.getElementById('badge').style.display = 'inline-flex';
+      document.getElementById('pk').textContent = connectedPubkey.slice(0,8) + '...' + connectedPubkey.slice(-8);
+      document.getElementById('connectBtn').style.display = 'none';
+      document.getElementById('phantomBtn').style.display = 'none';
+      document.getElementById('solflareBtn').style.display = 'none';
+      document.getElementById('orDivider').style.display = 'none';
+      document.getElementById('spillAddr').value = connectedPubkey;
+      window._useSolflare = true;
+      connection = new solanaWeb3.Connection(network.rpc, 'confirmed');
+      checkResume();
+      checkStep3();
+    } catch(e) { alert('Solflare connect failed: ' + e.message); }
+    document.getElementById('solflareBtn').disabled = false;
+  }
+
+  async function connectPhantom() {
+    if (!window.solana?.isPhantom) { alert('Phantom extension not found. Install it at phantom.app'); return; }
+    document.getElementById('phantomBtn').disabled = true;
+    try {
+      const resp = await window.solana.connect();
+      connectedPubkey = resp.publicKey.toString();
+      document.getElementById('qrcode').innerHTML = '';
+      document.getElementById('badge').style.display = 'inline-flex';
+      document.getElementById('pk').textContent = connectedPubkey.slice(0,8) + '...' + connectedPubkey.slice(-8);
+      document.getElementById('connectBtn').style.display = 'none';
+      document.getElementById('phantomBtn').style.display = 'none';
+      document.getElementById('orDivider').style.display = 'none';
+      document.getElementById('spillAddr').value = connectedPubkey;
+      window._usePhantom = true;
+      connection = new solanaWeb3.Connection(network.rpc, 'confirmed');
+      checkResume();
+      checkStep3();
+    } catch(e) { alert('Phantom connect failed: ' + e.message); }
+    document.getElementById('phantomBtn').disabled = false;
+  }
+
   async function connectWallet() {
     document.getElementById('connectBtn').disabled = true;
     client = null; session = null; // force fresh init
@@ -464,6 +530,28 @@
     });
   }
 
+  async function showVerifyQR(description, statusId) {
+    const hashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(description));
+    const hex = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2,'0')).join('');
+    const verifyCode = hex.slice(0,4).toUpperCase() + '-' + hex.slice(4,8).toUpperCase();
+    const payload = JSON.stringify({ desc: description, code: verifyCode });
+    const compressed = LZString.compressToEncodedURIComponent(payload);
+    const verifyUrl = `https://walletdeploy.com/verify.html?d=${compressed}`;
+    setStatus(statusId, `📱 Scan with your phone to verify, or click Continue to sign directly.\n\nVerify code: ${verifyCode}`, 'info');
+    const statusEl = document.getElementById(statusId);
+    const qrDiv = document.createElement('div');
+    qrDiv.style.cssText = 'margin:12px 0;text-align:center;';
+    statusEl.parentNode.insertBefore(qrDiv, statusEl.nextSibling);
+    new QRCode(qrDiv, { text: verifyUrl, width: 220, height: 220 });
+    const continueBtn = document.createElement('button');
+    continueBtn.textContent = 'Continue to Sign →';
+    continueBtn.className = 'btn-action';
+    continueBtn.style.cssText = 'width:100%;margin-top:12px;';
+    qrDiv.appendChild(continueBtn);
+    await new Promise(resolve => { continueBtn.onclick = resolve; });
+    qrDiv.remove();
+  }
+
   async function sendWithRetry(rawTx, statusId) {
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
@@ -489,6 +577,8 @@
         const isSimFail = e.message &&
           (e.message.includes('simulation failed') ||
            e.message.includes('invalid account data'));
+        const isAlreadyProcessed = e.message && e.message.includes('already been processed');
+        if (isAlreadyProcessed) return null; // treat as success
         if (isSimFail) {
           throw new Error('Transaction simulation failed: ' + e.message);
         }
@@ -504,7 +594,6 @@
   // Sign with cold wallet via WalletConnect, add local sigs first if provided
   async function signAndSendCold(tx, statusId, localSigners) {
     try {
-      // localSigners: array of { keypair, pubkey } — nacl keypairs to sign locally first
       if (localSigners) {
         const msgBytes = tx.serializeMessage();
         for (const { keypair, pubkey } of localSigners) {
@@ -512,25 +601,44 @@
           tx.addSignature(pubkey, sig);
         }
       }
-      const serialized = tx.serialize({ requireAllSignatures: false, verifySignatures: false });
-      const b64 = btoa(String.fromCharCode(...serialized));
-      setStatus(statusId, '⏳ Tap your card to sign...', 'loading');
-      const result = await client.request({
-        topic: session.topic, chainId: network.chain,
-        request: { method: 'solana_signTransaction', params: { transaction: b64 } },
-      });
       const coldPk = new solanaWeb3.PublicKey(connectedPubkey);
       let rawTx;
-      if (result.signature) {
-        tx.addSignature(coldPk, b58decode(result.signature));
-        rawTx = tx.serialize();
-      } else if (result.transaction) {
-        const raw = result.transaction;
-        rawTx = raw.match(/^[0-9a-fA-F]+$/)
-          ? new Uint8Array(raw.match(/.{1,2}/g).map(b => parseInt(b,16)))
-          : Uint8Array.from(atob(raw), c => c.charCodeAt(0));
+      if (window._usePhantom) {
+        setStatus(statusId, '⏳ Approve in Phantom...', 'loading');
+        // Use signAndSendTransaction with skipPreflight:true — standard pattern for BPFLoader (same as Solana CLI)
+        const { signature } = await window.solana.signAndSendTransaction(tx, { skipPreflight: true });
+        setStatus(statusId, '⏳ Confirming transaction...', 'loading');
+        const start = Date.now();
+        while (Date.now() - start < 60000) {
+          await new Promise(r => setTimeout(r, 2000));
+          const status = await connection.getSignatureStatus(signature, { searchTransactionHistory: true });
+          if (status?.value?.err) throw new Error('TX failed: ' + JSON.stringify(status.value.err));
+          if (status?.value?.confirmationStatus === 'confirmed' || status?.value?.confirmationStatus === 'finalized') return signature;
+        }
+        return signature;
+      } else if (window._useSolflare) {
+        setStatus(statusId, '⏳ Approve in Solflare...', 'loading');
+        const signed = await window.solflare.signTransaction(tx);
+        rawTx = signed.serialize();
       } else {
-        throw new Error('Unexpected wallet response');
+        const serialized = tx.serialize({ requireAllSignatures: false, verifySignatures: false });
+        const b64 = btoa(String.fromCharCode(...serialized));
+        setStatus(statusId, '⏳ Tap your card to sign...', 'loading');
+        const result = await client.request({
+          topic: session.topic, chainId: network.chain,
+          request: { method: 'solana_signTransaction', params: { transaction: b64 } },
+        });
+        if (result.signature) {
+          tx.addSignature(coldPk, b58decode(result.signature));
+          rawTx = tx.serialize();
+        } else if (result.transaction) {
+          const raw = result.transaction;
+          rawTx = raw.match(/^[0-9a-fA-F]+$/)
+            ? new Uint8Array(raw.match(/.{1,2}/g).map(b => parseInt(b,16)))
+            : Uint8Array.from(atob(raw), c => c.charCodeAt(0));
+        } else {
+          throw new Error('Unexpected wallet response');
+        }
       }
       return await sendWithRetry(rawTx, statusId);
     } catch(e) {
@@ -568,42 +676,54 @@
       const rentExemptMin = await connection.getMinimumBalanceForRentExemption(bufferBytes);
       const actualRent = Math.max(rentLamports, rentExemptMin);
 
-      const { blockhash, lastValidBlockHeight } =
-        await connection.getLatestBlockhash('confirmed');
+      setStatus('tap1Status', 'Building transaction...', 'loading');
 
-      const tx = new Transaction({ recentBlockhash: blockhash, feePayer: coldPk });
-      tx.add(priorityFeeIx());
+      // ── Transaction A: Phantom signs — SOL transfers + BWD memo only (no BPFLoader) ──
+      const { blockhash: bhA } = await connection.getLatestBlockhash('confirmed');
+      const txA = new Transaction({ recentBlockhash: bhA, feePayer: coldPk });
+      txA.add(priorityFeeIx());
 
-      // Instruction 1: createAccount — cold wallet creates buffer account (raw to avoid Buffer polyfill)
-      const createAccountData = new Uint8Array(52);
-      new DataView(createAccountData.buffer).setUint32(0, 0, true);                        // instruction index 0 = CreateAccount
-      new DataView(createAccountData.buffer).setBigUint64(4, BigInt(actualRent), true);  // lamports
-      new DataView(createAccountData.buffer).setBigUint64(12, BigInt(bufferBytes), true);  // space
-      createAccountData.set(new solanaWeb3.PublicKey(BPF_LOADER).toBytes(), 20);           // owner
-      tx.add(new TransactionInstruction({
+      // Single transfer: rent + fees combined to ephemeral
+      const totalFund = actualRent + feeLamports;
+      const transferAllData = new Uint8Array(12);
+      new DataView(transferAllData.buffer).setUint32(0, 2, true);
+      new DataView(transferAllData.buffer).setBigUint64(4, BigInt(totalFund), true);
+      txA.add(new TransactionInstruction({
         programId: SystemProgram.programId,
         keys: [
-          { pubkey: coldPk,       isSigner: true, isWritable: true },
-          { pubkey: bufferPubkey, isSigner: true, isWritable: true },
+          { pubkey: coldPk,          isSigner: true,  isWritable: true },
+          { pubkey: ephemeralPubkey, isSigner: false, isWritable: true },
+        ],
+        data: transferAllData,
+      }));
+
+      // BWD memo — sent separately by ephemeral after buffer created (no Phantom)
+      // Transaction A: Phantom signs — pure SOL transfer only
+      const sigA = await signAndSendCold(txA, 'tap1Status', null);
+      setStatus('tap1Status', '⚙️ Funded. Creating buffer on-chain...', 'loading');
+
+      // ── Transaction B: ephemeral signs locally — BPFLoader only (no Phantom) ──
+      const { blockhash: bhB } = await connection.getLatestBlockhash('confirmed');
+      const txB = new Transaction({ recentBlockhash: bhB, feePayer: ephemeralPubkey });
+      txB.add(priorityFeeIx());
+
+      // CreateAccount — ephemeral pays from its newly funded balance
+      const createAccountData = new Uint8Array(52);
+      new DataView(createAccountData.buffer).setUint32(0, 0, true);
+      new DataView(createAccountData.buffer).setBigUint64(4, BigInt(actualRent), true);
+      new DataView(createAccountData.buffer).setBigUint64(12, BigInt(bufferBytes), true);
+      createAccountData.set(new solanaWeb3.PublicKey(BPF_LOADER).toBytes(), 20);
+      txB.add(new TransactionInstruction({
+        programId: SystemProgram.programId,
+        keys: [
+          { pubkey: ephemeralPubkey, isSigner: true, isWritable: true },
+          { pubkey: bufferPubkey,    isSigner: true, isWritable: true },
         ],
         data: createAccountData,
       }));
 
-      // Instruction 2: fund ephemeral keypair for write fees
-      const transferData = new Uint8Array(12);
-      new DataView(transferData.buffer).setUint32(0, 2, true);                       // instruction index 2 = Transfer
-      new DataView(transferData.buffer).setBigUint64(4, BigInt(feeLamports), true);
-      tx.add(new TransactionInstruction({
-        programId: SystemProgram.programId,
-        keys: [
-          { pubkey: coldPk,         isSigner: true,  isWritable: true },
-          { pubkey: ephemeralPubkey, isSigner: false, isWritable: true },
-        ],
-        data: transferData,
-      }));
-
-      // Instruction 3: InitializeBuffer — ephemeral is authority (must be signer)
-      tx.add(new TransactionInstruction({
+      // InitializeBuffer
+      txB.add(new TransactionInstruction({
         programId: new PublicKey(BPF_LOADER),
         keys: [
           { pubkey: bufferPubkey,    isSigner: false, isWritable: true  },
@@ -612,32 +732,34 @@
         data: new Uint8Array([0, 0, 0, 0]),
       }));
 
-      // Instruction 4: BWD delegation memo — on-chain audit record
+      // Sign and send locally — no wallet interaction
+      const msgBytesB = txB.serializeMessage();
+      const ephSig = nacl.sign.detached(msgBytesB, ephemeralKeypair.secretKey);
+      const bufSig = nacl.sign.detached(msgBytesB, bufferKeypair.secretKey);
+      txB.addSignature(ephemeralPubkey, ephSig);
+      txB.addSignature(bufferPubkey, bufSig);
+      const sigB = await sendWithRetry(txB.serialize(), 'tap1Status');
+
+      // ── Transaction C: ephemeral signs locally — BWD memo (audit trail) ──
+      const { blockhash: bhC } = await connection.getLatestBlockhash('confirmed');
+      const txC = new Transaction({ recentBlockhash: bhC, feePayer: ephemeralPubkey });
       const bwdMemo = JSON.stringify({
         type:      'BWD',
         authority: connectedPubkey,
         delegate:  ephemeralPubkey.toBase58(),
         buffer:    bufferPubkey.toBase58(),
-        expires:   Math.floor(Date.now() / 1000) + 3600,
         maxBytes:  programBytes.length,
       });
-      tx.add(memoIx(bwdMemo, coldPk));
-
-      setStatus('tap1Status', 'Building transaction...', 'loading');
-
-      // bufferKeypair signs locally (new account); ephemeralKeypair signs as InitializeBuffer authority
-      const sig = await signAndSendCold(tx, 'tap1Status',
-        [
-          { keypair: bufferKeypair,    pubkey: bufferPubkey    },
-          { keypair: ephemeralKeypair, pubkey: ephemeralPubkey },
-        ]);
+      txC.add(memoIx(bwdMemo, ephemeralPubkey));
+      txC.sign({ publicKey: ephemeralPubkey, secretKey: ephemeralKeypair.secretKey });
+      await sendWithRetry(txC.serialize(), 'tap1Status');
 
       // Lock network, save session
       networkLocked = true;
       saveSession();
 
       setStatusHtml('tap1Status',
-        `✅ Authorized! Buffer created on-chain. BWD memo recorded.\n\n${explorerLink(sig)}`,
+        `✅ Authorized! Buffer created on-chain. BWD memo recorded.\n\n${explorerLink(sigA)}`,
         'success');
 
       enableCard('step4Card');
@@ -962,6 +1084,7 @@
           coldPk
         ));
         console.log('Sending upgrade transaction...');
+        await showVerifyQR(`UPGRADE | program:${programId.toBase58()} | buffer:${bufferPubkey.toBase58()} | authority:${connectedPubkey}`, 'tap2Status');
         const sig = await signAndSendCold(tx, 'tap2Status', null);
         console.log('✅ Upgrade successful! Signature:', sig);
         setStatusHtml('tap2Status',
@@ -1058,10 +1181,12 @@
         console.log('Memo instruction added');
         console.log('Transaction has', tx.instructions.length, 'instructions');
 
-        // programKeypair signs locally, cold wallet signs via WalletConnect
         console.log('Signing with program keypair locally, then requesting cold wallet signature...');
-        const sig = await signAndSendCold(tx, 'tap2Status',
-          [{ keypair: programKeypair, pubkey: programKeypairPk }]);
+        // Sign with program keypair first
+        const msgBytes = tx.serializeMessage();
+        tx.addSignature(programKeypairPk, nacl.sign.detached(msgBytes, programKeypair.secretKey));
+        await showVerifyQR(`DEPLOY | program:${programKeypairPk.toBase58()} | buffer:${bufferPubkey.toBase58()} | authority:${connectedPubkey}`, 'tap2Status');
+        const sig = await signAndSendCold(tx, 'tap2Status', null);
         console.log('✅ Deploy successful! Signature:', sig);
 
         setStatusHtml('tap2Status',
@@ -1124,6 +1249,7 @@
     ephemeralKeypair = null;
     bufferKeypair    = null;
     programKeypair   = null;
+    sessionTimestamp = null;
 
     // Clear session
     console.log('Clearing session storage...');
@@ -1137,6 +1263,18 @@
       existing + '\n\n✅ Unused SOL returned. Ephemeral keys destroyed. Session cleared.';
     console.log('Cleanup complete.');
   }
+
+  // Read URL params for pre-fill from app.html
+  (function() {
+    const params = new URLSearchParams(window.location.search);
+    const mode = params.get('mode');
+    const programId = params.get('program');
+    if (mode === 'upgrade' && programId) {
+      document.getElementById('modeUpgrade').checked = true;
+      setMode('upgrade');
+      document.getElementById('existingProgramId').value = programId;
+    }
+  })();
 
 </script>
 </body>
